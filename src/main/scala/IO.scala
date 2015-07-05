@@ -1,7 +1,7 @@
 package ca.hyperreal.bittydb
 
 
-trait IO
+abstract class IO
 {
 	def close
 	
@@ -16,8 +16,6 @@ trait IO
 	def pos_=( p: Long )
 	
 	def append: Long
-	
-	def add( increase: Long ): Long
 	
 	def getByte: Byte
 	
@@ -43,7 +41,25 @@ trait IO
 	
 	def putLong( l: Long )
 	
+	def getDouble: Double
+	
+	def putDouble( d: Double )
+	
 	def writeChars( s: String )
+	
+	if (size == 0) {
+		putString( s"BittyDB $VERSION" )
+		pos = 0
+		force
+	}
+	
+// 	def increase( s: Long ): Long = {
+// 		val p = size
+// 		
+// 		size = size + s
+// 		pos = p
+// 		p
+// 	}
 	
 	def remaining: Long = size - pos
 
@@ -84,4 +100,6 @@ trait IO
 		putByte( s.length.asInstanceOf[Byte] )
 		writeChars( s )
 	}
+	
+	def todo = sys.error( "not done yet" )
 }

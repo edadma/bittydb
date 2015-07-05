@@ -5,7 +5,7 @@ import java.io._
 
 class DiskIO( f: File ) extends IO
 {
-	private val file = new RandomAccessFile( f, "rw" )
+	private lazy val file = new RandomAccessFile( f, "rw" )
 	
 	def close = file.close
 	
@@ -24,14 +24,6 @@ class DiskIO( f: File ) extends IO
 		
 		file.seek( l )
 		l
-	}
-	
-	def add( increase: Long ): Long = {
-		val p = size
-		
-		size = size + increase
-		pos = p
-		p
 	}
 	
 	def getByte: Byte = file.readByte
@@ -57,6 +49,10 @@ class DiskIO( f: File ) extends IO
 	def getLong: Long = file.readLong
 	
 	def putLong( l: Long ) = file.writeLong( l )
+	
+	def getDouble: Double = file.readDouble
+	
+	def putDouble( d: Double ) = file.writeDouble( d )
 	
 	def writeChars( s: String ) = file.writeChars( s )
 }

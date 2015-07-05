@@ -24,10 +24,10 @@ libraryDependencies ++= Seq(
 	"org.scalacheck" %% "scalacheck" % "1.11.5" % "test"
 	)
 
-libraryDependencies ++= Seq(
-	"org.slf4j" % "slf4j-api" % "1.7.7",
-	"org.slf4j" % "slf4j-simple" % "1.7.7"
-	)
+//libraryDependencies ++= Seq(
+//	"org.slf4j" % "slf4j-api" % "1.7.7",
+//	"org.slf4j" % "slf4j-simple" % "1.7.7"
+//	)
 
 mainClass in (Compile, run) := Some( "ca.hyperreal." + name.value + ".Main" )
 
