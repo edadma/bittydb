@@ -47,6 +47,19 @@ abstract class IO
 	
 	def writeChars( s: String )
 	
+	def dump {
+		val cur = pos
+		
+		pos = 0
+		
+		def printByte( b: Int ) = print( "%02x ".format(b).toUpperCase )
+		
+		def printChar( c: Char ) = print( if (' ' <= c && c <= '~') c else '.' )
+		
+		for (_ <- 1L to size)
+			printByte( getByte )
+	}
+	
 	if (size == 0) {
 		putString( s"BittyDB $VERSION" )
 		pos = 0

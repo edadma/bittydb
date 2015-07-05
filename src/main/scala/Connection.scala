@@ -9,7 +9,7 @@ object Connection
 	
 	def disk( f: File ) = new Connection( new DiskIO(f) )
 	
-	
+	def mem = new Connection( new MemIO )
 }
 
 class Connection( io: IO )
@@ -27,4 +27,8 @@ class Connection( io: IO )
 	}
 	
 	def invalid = sys.error( "invalid database" )
+	
+	def dump = io.dump
+	
+	override def toString = "connection to " + io
 }

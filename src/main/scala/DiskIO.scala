@@ -55,4 +55,6 @@ class DiskIO( f: File ) extends IO
 	def putDouble( d: Double ) = file.writeDouble( d )
 	
 	def writeChars( s: String ) = file.writeChars( s )
+	
+	override def toString = f.toString
 }
