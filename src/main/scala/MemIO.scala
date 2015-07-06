@@ -113,7 +113,7 @@ class MemIO extends IO
 		db.buffer.putDouble( d )
 	}
 
-	def writeChars( s: String ) = s foreach {c => putByte( c.asInstanceOf[Int] )}
+	def writeByteChars( s: String ) = s foreach {c => putByte( c.asInstanceOf[Int] )}
 	
 	override def toString = "mem"
 }

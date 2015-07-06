@@ -54,7 +54,7 @@ class DiskIO( f: File ) extends IO
 	
 	def putDouble( d: Double ) = file.writeDouble( d )
 	
-	def writeChars( s: String ) = file.writeBytes( s )
+	def writeByteChars( s: String ) = file.writeBytes( s )
 	
 //	def writeChars( s: String ) = file.writeChars( s )
 	

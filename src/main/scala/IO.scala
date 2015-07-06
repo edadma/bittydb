@@ -49,7 +49,7 @@ abstract class IO
 	
 	def putDouble( d: Double )
 	
-	def writeChars( s: String )
+	def writeByteChars( s: String )
 	
 // 	def increase( s: Long ): Long = {
 // 		val p = size
@@ -82,7 +82,7 @@ abstract class IO
 	
 	def remaining: Long = size - pos
 
-	def readChars( len: Int ) = {
+	def readByteChars( len: Int ) = {
 		val buf = new StringBuilder
 		
 		for (_ <- 1 to len)
@@ -100,33 +100,65 @@ abstract class IO
 // 		buf.toString
 // 	}
 
-// 	def readOptionChars( len: Int ) = {
-// 		val s = readChars( len )
-// 		
-// 		if (s forall Character.isDefined)
-// 			Some( s )
-// 		else
-// 			None
-// 	}
-// 	
-// 	def getOptionString = {
-// 		if (remaining >= 1) {
-// 			val len = getUnsignedByte
-// 			
-// 			if (remaining >= 2*len)
-// 				readOptionChars( len )
-// 			else
-// 				None
-// 		}
-// 		else
-// 			None
-// 	}
+	def getByteString = {
+		if (remaining >= 1) {
+			val len = getUnsignedByte
+			
+			if (remaining >= len)
+				Some( readByteChars(len) )
+			else
+				None
+		}
+		else
+			None
+	}
 	
-	def getString = readChars( getUnsignedByte )
-	
-	def putString( s: String ) {
+	def putByteString( s: String ) {
 		putByte( s.length.asInstanceOf[Byte] )
-		writeChars( s )
+		writeByteChars( s )
+	}
+	
+	def getLen: Int = {
+		var len = 0
+		
+		def read {
+			val b = getByte
+			len = (len << 7) | (b&0x7F)
+			
+			if ((b&0x80) != 0)
+				read
+		}
+
+		read
+		len
+	}
+	
+	def putLen( l: Int ) {
+		if (l == 0)
+			putByte( 0 )
+		else {
+			var downshift = 28
+			var compare = 0x10000000
+			
+			while (l < compare) {
+				downshift -= 7
+				compare >>= 7
+			}
+			
+			while (downshift >= 0) {
+				putByte( (if (downshift > 0) 0x80 else 0) | ((l >> downshift)&0x7F) )
+				downshift -= 7
+			}
+		}
+	}
+	
+	def getString = new String( getBytes(getLen), charset )
+	
+	def putString( s: String ) = {
+		val buf = s.getBytes( charset )
+		
+		putLen( buf.length )
+		putBytes( buf )
 	}
 	
 	def dump {

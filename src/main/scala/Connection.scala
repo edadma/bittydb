@@ -22,18 +22,17 @@ class Connection( private [bittydb] val io: IO, charset: Charset )
 	
 	if (io.size == 0) {
 		version = VERSION
-		io putString s"BittyDB $version"
+		io putByteString s"BittyDB $version"
 		io.charset = charset
-		io putString charset.name
+		io putByteString charset.name
 		freeListPtr = io.pos
 		freeList = 0
 		io putPtr freeList
 		io.force
 	}
 	else
-		io.getString match
-		{
-			case s if s startsWith "BittyDB " =>
+		io.getByteString match {
+			case Some( s ) if s startsWith "BittyDB " =>
 				log( s )
 				
 				version = s substring 8
@@ -41,9 +40,13 @@ class Connection( private [bittydb] val io: IO, charset: Charset )
 				if (version > VERSION)
 					sys.error( "attempting to read database of newer format version" )
 					
-				io.charset = Charset.forName( io.getString )
-				freeListPtr = io.pos
-				freeList = io.getPtr
+				io.getByteString match {
+					case Some( cs ) =>
+						io.charset = Charset.forName( cs )
+						freeListPtr = io.pos
+						freeList = io.getPtr
+					case _ => invalid
+				}				
 			case _ => invalid
 		}
 	
