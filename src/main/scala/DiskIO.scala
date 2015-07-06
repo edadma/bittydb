@@ -28,7 +28,7 @@ class DiskIO( f: File ) extends IO
 	
 	def getByte: Byte = file.readByte
 	
-	def putByte( b: Byte ) = file.writeByte( b )
+	def putByte( b: Int ) = file.writeByte( b )
 	
 	def getUnsignedByte: Int = file.readUnsignedByte
 	
@@ -38,7 +38,7 @@ class DiskIO( f: File ) extends IO
 	
 	def getShort: Short = file.readShort
 	
-	def putShort( s: Short ) = file.writeShort( s )
+	def putShort( s: Int ) = file.writeShort( s )
 	
 	def getUnsignedShort: Int = file.readUnsignedShort
 	
@@ -54,7 +54,9 @@ class DiskIO( f: File ) extends IO
 	
 	def putDouble( d: Double ) = file.writeDouble( d )
 	
-	def writeChars( s: String ) = file.writeChars( s )
+	def writeChars( s: String ) = file.writeBytes( s )
+	
+//	def writeChars( s: String ) = file.writeChars( s )
 	
 	override def toString = f.toString
 }

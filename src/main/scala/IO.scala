@@ -1,8 +1,12 @@
 package ca.hyperreal.bittydb
 
+import java.nio.charset.Charset
+
 
 abstract class IO
 {
+	private [bittydb] var charset: Charset = null
+	
 	def close
 	
 	def force
@@ -19,7 +23,7 @@ abstract class IO
 	
 	def getByte: Byte
 	
-	def putByte( b: Byte )
+	def putByte( b: Int )
 	
 	def getUnsignedByte: Int
 	
@@ -29,7 +33,7 @@ abstract class IO
 	
 	def getShort: Short
 	
-	def putShort( s: Short )
+	def putShort( s: Int )
 	
 	def getUnsignedShort: Int
 	
@@ -47,25 +51,6 @@ abstract class IO
 	
 	def writeChars( s: String )
 	
-	def dump {
-		val cur = pos
-		
-		pos = 0
-		
-		def printByte( b: Int ) = print( "%02x ".format(b).toUpperCase )
-		
-		def printChar( c: Char ) = print( if (' ' <= c && c <= '~') c else '.' )
-		
-		for (_ <- 1L to size)
-			printByte( getByte )
-	}
-	
-	if (size == 0) {
-		putString( s"BittyDB $VERSION" )
-		pos = 0
-		force
-	}
-	
 // 	def increase( s: Long ): Long = {
 // 		val p = size
 // 		
@@ -74,38 +59,68 @@ abstract class IO
 // 		p
 // 	}
 	
+	def getPtr: Long = (getByte.asInstanceOf[Long]&0xFF)<<32 | getInt.asInstanceOf[Long]&0xFFFFFFFFL
+	
+	def putPtr( l: Long ) {
+		putByte( (l>>32).asInstanceOf[Int] )
+		putInt( l.asInstanceOf[Int] )
+	}
+	
+	def getBytes( len: Int ) = {
+		val array = new Array[Byte]( len )
+		
+		for (i <- 0 until len)
+			array(i) = getByte
+			
+		array
+	}
+	
+	def putBytes( array: Array[Byte] ) {
+		for (b <- array)
+			putByte( b )
+	}
+	
 	def remaining: Long = size - pos
 
 	def readChars( len: Int ) = {
 		val buf = new StringBuilder
 		
 		for (_ <- 1 to len)
-			buf += getChar
+			buf += getByte.asInstanceOf[Char]
 			
 		buf.toString
 	}
 
-	def readOptionChars( len: Int ) = {
-		val s = readChars( len )
-		
-		if (s forall Character.isDefined)
-			Some( s )
-		else
-			None
-	}
-	
-	def getOptionString = {
-		if (remaining >= 1) {
-			val len = getUnsignedByte
-			
-			if (remaining >= 2*len)
-				readOptionChars( len )
-			else
-				None
-		}
-		else
-			None
-	}
+// 	def readChars( len: Int ) = {
+// 		val buf = new StringBuilder
+// 		
+// 		for (_ <- 1 to len)
+// 			buf += getChar
+// 			
+// 		buf.toString
+// 	}
+
+// 	def readOptionChars( len: Int ) = {
+// 		val s = readChars( len )
+// 		
+// 		if (s forall Character.isDefined)
+// 			Some( s )
+// 		else
+// 			None
+// 	}
+// 	
+// 	def getOptionString = {
+// 		if (remaining >= 1) {
+// 			val len = getUnsignedByte
+// 			
+// 			if (remaining >= 2*len)
+// 				readOptionChars( len )
+// 			else
+// 				None
+// 		}
+// 		else
+// 			None
+// 	}
 	
 	def getString = readChars( getUnsignedByte )
 	
@@ -114,5 +129,34 @@ abstract class IO
 		writeChars( s )
 	}
 	
-	def todo = sys.error( "not done yet" )
+	def dump {
+		val cur = pos
+		val width = 16
+		
+		pos = 0
+		
+		def printByte( b: Int ) = print( "%02x ".format(b).toUpperCase )
+		
+		def printChar( c: Int ) = print( if (' ' <= c && c <= '~') c.asInstanceOf[Char] else '.' )
+		
+		for (line <- 0L until size by width) {
+			printf( s"%010x  ", line )
+			
+			val mark = pos
+			
+			for (i <- line until ((line + width) min size))
+				printByte( getByte )
+				
+			print( " "*((width - (pos - mark).asInstanceOf[Int])*3 + 2) )
+			
+			pos = mark
+			
+			for (i <- line until ((line + width) min size))
+				printChar( getByte.asInstanceOf[Int] )
+				
+			println
+		}
+		
+		pos = cur
+	}
 }

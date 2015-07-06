@@ -15,6 +15,11 @@ class ExpandableByteBuffer
 	
 	def size = _size
 	
+	def size_=( s: Int ) {
+		sizeHint( s )
+		_size = s
+	}
+	
 	def allocate( capacity: Int ) = {
 		val res = new Array[Byte]( capacity )
 		val p = 
@@ -51,7 +56,7 @@ class MemIO extends IO
 	
 	def size: Long = db.size
 	
-	def size_=( l: Long ) = todo
+	def size_=( l: Long ) = db.size = l.asInstanceOf[Int]
 	
 	def pos: Long = db.buffer.position
 	
@@ -64,9 +69,9 @@ class MemIO extends IO
 	
 	def getByte: Byte = db.buffer.get
 	
-	def putByte( b: Byte ) {
+	def putByte( b: Int ) {
 		db.need( 1 )
-		db.buffer.put( b )
+		db.buffer.put( b.asInstanceOf[Byte] )
 	}
 	
 	def getUnsignedByte: Int = getByte&0xFF
@@ -80,9 +85,9 @@ class MemIO extends IO
 	
 	def getShort: Short = db.buffer.getShort
 	
-	def putShort( s: Short ) {
+	def putShort( s: Int ) {
 		db.need( 2 )
-		db.buffer.putShort( s )
+		db.buffer.putShort( s.asInstanceOf[Short] )
 	}
 	
 	def getUnsignedShort: Int = getShort&0xFFFF
@@ -108,7 +113,7 @@ class MemIO extends IO
 		db.buffer.putDouble( d )
 	}
 
-	def writeChars( s: String ) = s foreach putChar
+	def writeChars( s: String ) = s foreach {c => putByte( c.asInstanceOf[Int] )}
 	
 	override def toString = "mem"
 }
