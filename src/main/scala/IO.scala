@@ -5,29 +5,8 @@ import java.nio.charset.Charset
 import collection.mutable.HashMap
 
 
-object IO {
-	val NULL = 0
-	val TRUE = 1
-	val FALSE = 2
-	val INT = 3
-	val LONG = 4
-	val BIGINT = 5
-	val DOUBLE = 6
-	val DECIMAL = 7
-	val NIL = 8
-	val STRING = 9
-	val EMPTY = 10
-	val OBJECT = 11
-	val POINTER = 12
-	
-	val SWIDTH = 5	// size width
-	val PWIDTH = 5	// pointer width
-}
-
-abstract class IO
+abstract class IO extends IOConstants
 {
-	import IO._
-	
 	private [bittydb] var charset: Charset = null
 	
 	def close
@@ -89,6 +68,26 @@ abstract class IO
 		putInt( l.asInstanceOf[Int] )
 	}
 	
+	def getByte( addr: Long ): Int = {
+		pos = addr
+		getByte
+	}
+	
+	def putByte( addr: Long, b: Int ) {
+		pos = addr
+		putByte( b )
+	}
+	
+	def getBig( addr: Long ): Long = {
+		pos = addr
+		getBig
+	}
+	
+	def putBig( addr: Long, b: Long ) {
+		pos = addr
+		putBig( b )
+	}
+	
 	def getBytes( len: Int ) = {
 		val array = new Array[Byte]( len )
 		
@@ -105,7 +104,7 @@ abstract class IO
 	
 	def remaining: Long = size - pos
 
-	def skip( len: Long ) = size += len
+	def skip( len: Long ) = pos += len
 	
 	def skipSize = skip( SWIDTH )
 	
@@ -190,6 +189,8 @@ abstract class IO
 		putBytes( buf )
 	}
 	
+	def strlen( s: String ) = s.getBytes( charset ).length
+
 	def getValue: Any =
 		(getByte match {
 			case POINTER =>
@@ -203,6 +204,9 @@ abstract class IO
 			case TRUE => true
 			case INT => getInt
 			case LONG => getLong
+			case DOUBLE => getDouble
+			case NIL => ""
+			case STRING => getString
 			case EMPTY => Map.empty
 			case OBJECT =>
 				val cont = getBig
@@ -247,7 +251,7 @@ abstract class IO
 			val start = pos
 			
 				skipSize	// size of object in bytes
-			
+				
 				for ((k, v) <- a) {
 					putValue( k )
 					putValue( v )
@@ -255,9 +259,18 @@ abstract class IO
 				
 			val len = pos - start - SWIDTH
 			
-				pos = start
-				putBig( len )
+				putBig( start, len )
 		}
+	}
+	
+	def getValue( addr: Long ): Any = {
+		pos = addr
+		getValue
+	}
+	
+	def putValue( addr: Long, v: Any ) {
+		pos = addr
+		putValue( v )
 	}
 	
 	def dump {
@@ -266,7 +279,7 @@ abstract class IO
 		
 		pos = 0
 		
-		def printByte( b: Int ) = print( "%02x ".format(b).toUpperCase )
+		def printByte( b: Int ) = print( "%02x ".format(b&0xFF).toUpperCase )
 		
 		def printChar( c: Int ) = print( if (' ' <= c && c <= '~') c.asInstanceOf[Char] else '.' )
 		

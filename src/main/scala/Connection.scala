@@ -50,7 +50,7 @@ class Connection( private [bittydb] val io: IO, charset: Charset )
 						freeList = io.getBig
 						root = new Pointer( io.pos )
 					case _ => invalid
-				}				
+				}
 			case _ => invalid
 		}
 	
@@ -58,10 +58,21 @@ class Connection( private [bittydb] val io: IO, charset: Charset )
 	
 	override def toString = "connection to " + io
 	
-	class Pointer( addr: Long ) {
-		def get = {
-			io.pos = addr
-			io.getValue
+	class Pointer( addr: Long ) extends IOConstants {
+		def get = io.getValue( addr )
+		
+		def put( v: Any ) {
+			io.putValue( addr, v )
+		}
+		
+		def set( kv: (Any, Any) ) {
+			io.getByte( addr ) match {
+				case EMPTY =>
+					io.putValue( addr, Map(kv) )
+				case OBJECT =>
+				case _ =>
+					sys.error( "can only use 'set' for an object" )
+			}
 		}
 	}
 }
