@@ -19,6 +19,7 @@ class Connection( private [bittydb] val io: IO, charset: Charset )
 	private [bittydb] var version: String = _
 	private [bittydb] var freeListPtr: Long = _
 	private [bittydb] var freeList: Long = _
+	private [bittydb] var root: Pointer = _
 	
 	if (io.size == 0) {
 		version = VERSION
@@ -27,7 +28,9 @@ class Connection( private [bittydb] val io: IO, charset: Charset )
 		io putByteString charset.name
 		freeListPtr = io.pos
 		freeList = 0
-		io putPtr freeList
+		io putBig freeList
+		root = new Pointer( io.pos )
+		io putValue Map.empty
 		io.force
 	}
 	else
@@ -44,7 +47,8 @@ class Connection( private [bittydb] val io: IO, charset: Charset )
 					case Some( cs ) =>
 						io.charset = Charset.forName( cs )
 						freeListPtr = io.pos
-						freeList = io.getPtr
+						freeList = io.getBig
+						root = new Pointer( io.pos )
 					case _ => invalid
 				}				
 			case _ => invalid
@@ -53,4 +57,11 @@ class Connection( private [bittydb] val io: IO, charset: Charset )
 	def invalid = sys.error( "invalid database" )
 	
 	override def toString = "connection to " + io
+	
+	class Pointer( addr: Long ) {
+		def get = {
+			io.pos = addr
+			io.getValue
+		}
+	}
 }

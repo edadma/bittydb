@@ -6,4 +6,6 @@ object Main extends App
 	val db = Connection.mem()
 	
 	db.io.dump
+	
+	println( db.root.get )
 }

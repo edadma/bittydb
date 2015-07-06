@@ -2,9 +2,32 @@ package ca.hyperreal.bittydb
 
 import java.nio.charset.Charset
 
+import collection.mutable.HashMap
+
+
+object IO {
+	val NULL = 0
+	val TRUE = 1
+	val FALSE = 2
+	val INT = 3
+	val LONG = 4
+	val BIGINT = 5
+	val DOUBLE = 6
+	val DECIMAL = 7
+	val NIL = 8
+	val STRING = 9
+	val EMPTY = 10
+	val OBJECT = 11
+	val POINTER = 12
+	
+	val SWIDTH = 5	// size width
+	val PWIDTH = 5	// pointer width
+}
 
 abstract class IO
 {
+	import IO._
+	
 	private [bittydb] var charset: Charset = null
 	
 	def close
@@ -59,9 +82,9 @@ abstract class IO
 // 		p
 // 	}
 	
-	def getPtr: Long = (getByte.asInstanceOf[Long]&0xFF)<<32 | getInt.asInstanceOf[Long]&0xFFFFFFFFL
+	def getBig: Long = (getByte.asInstanceOf[Long]&0xFF)<<32 | getInt.asInstanceOf[Long]&0xFFFFFFFFL
 	
-	def putPtr( l: Long ) {
+	def putBig( l: Long ) {
 		putByte( (l>>32).asInstanceOf[Int] )
 		putInt( l.asInstanceOf[Int] )
 	}
@@ -82,6 +105,12 @@ abstract class IO
 	
 	def remaining: Long = size - pos
 
+	def skip( len: Long ) = size += len
+	
+	def skipSize = skip( SWIDTH )
+	
+	def skipPointer = skip( PWIDTH )
+	
 	def readByteChars( len: Int ) = {
 		val buf = new StringBuilder
 		
@@ -159,6 +188,76 @@ abstract class IO
 		
 		putLen( buf.length )
 		putBytes( buf )
+	}
+	
+	def getValue: Any =
+		(getByte match {
+			case POINTER =>
+				pos = getBig
+				getByte
+			case b =>
+				b
+		}) match {
+			case NULL => null
+			case FALSE => false
+			case TRUE => true
+			case INT => getInt
+			case LONG => getLong
+			case EMPTY => Map.empty
+			case OBJECT =>
+				val cont = getBig
+				val len = getBig
+				val start = pos
+				var map = Map.empty[Any, Any]
+				
+				while (pos - start < len)
+					map += getValue -> getValue
+					
+				map
+		}
+	
+	def putValue( v: Any ) {
+		v match {
+			case null =>
+				putByte( NULL )
+			case false =>
+				putByte( FALSE )
+			case true =>
+				putByte( TRUE )
+			case a: Int =>
+				putByte( INT )
+				putInt( a )
+			case a: Long =>
+				putByte( LONG )
+				putLong( a )
+			case a: Double =>
+				putByte( DOUBLE )
+				putDouble( a )
+			case "" =>
+				putByte( NIL )
+			case a: String =>
+				putByte( STRING )
+				putString( a )
+			case a: collection.Map[_, _] if a isEmpty =>
+				putByte( EMPTY )
+			case a: collection.Map[_, _] =>
+				putByte( OBJECT )
+				putBig( 0 )	// continuation pointer
+				
+			val start = pos
+			
+				skipSize	// size of object in bytes
+			
+				for ((k, v) <- a) {
+					putValue( k )
+					putValue( v )
+				}
+				
+			val len = pos - start - SWIDTH
+			
+				pos = start
+				putBig( len )
+		}
 	}
 	
 	def dump {
