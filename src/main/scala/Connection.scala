@@ -82,12 +82,30 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 						return Right( addr )
 					else
 						io.skipValue
-				else if (where == None)
-					where = Some( io.pos - 1 )
+				else {
+					if (where == None)
+						where = Some( io.pos - 1 )
+						
+					io.skipValue
+					io.skipValue
+				}
 			}
 			
 			Left( where )
 		}
+		
+		def remove( key: Any ) =
+			io.getType( addr ) match {
+				case EMPTY => false
+				case OBJECT =>
+					lookup( key ) match {
+						case Left( _ ) => false
+						case Right( at ) =>
+							io.putByte( at, UNUSED )
+							true
+					}
+				case _ => sys.error( "can only use 'remove' for an object" )
+			}
 		
 		def find( key: Any ): Option[Pointer] =
 			io.getType( addr ) match {
@@ -99,7 +117,12 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 		private [bittydb] def atEnd =
 			io.getType( addr ) match {
 				case OBJECT =>
-				case STRING =>
+					io.skipBig
+					io.pos + BWIDTH + io.getBig == io.size
+				case STRING => sys.error( "not yet" )
+				case BIGINT => sys.error( "not yet" )
+				case DECIMAL => sys.error( "not yet" )
+				case ARRAY => sys.error( "not yet" )
 			}
 			
 		def set( kv: (Any, Any) ) {
@@ -108,8 +131,21 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 				case OBJECT =>
 					lookup( kv._1 ) match {
 						case Left( None ) =>
-							
-						case Left( Some(insertion) ) => sys.error( "insertion point found" )
+							if (atEnd) {
+								io.skipByte( addr )
+								io.skipBig
+								io.addBig( PWIDTH )
+								io.append
+								io.putPair( kv )
+							}
+							else {
+								io.skipByte( addr )
+								io.putBig( io.size )
+								io.append
+								io.putObject( Map(kv) )
+							}
+						case Left( Some(insertion) ) =>
+							io.putPair( insertion, kv )
 						case Right( at ) => io.putValue( kv._2 )
 					}
 				case _ => sys.error( "can only use 'set' for an object" )

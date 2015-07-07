@@ -11,12 +11,15 @@ trait IOConstants {
 	val BIGINT = 5
 	val DOUBLE = 6
 	val DECIMAL = 7
-	val NIL = 8
-	val STRING = 9
-	val EMPTY = 10
-	val OBJECT = 11
+	val STRING = 8
+	val EMPTY = 9
+	val OBJECT = 10
+	val NIL = 11
+	val ARRAY = 12
 	
-	val PWIDTH = 5	// pointer width
+	val BWIDTH = 5				// big (i.e. pointers, sizes) width
+	val VWIDTH = 1 + 8			// value width
+	val PWIDTH = 1 + 2*VWIDTH 	// pair width
 	
 	val USED = 0
 	val UNUSED = 1

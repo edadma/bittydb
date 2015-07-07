@@ -2,7 +2,7 @@ package ca.hyperreal.bittydb
 
 import java.nio.charset.Charset
 
-import collection.mutable.HashMap
+import collection.mutable.{ListBuffer, HashMap}
 
 
 abstract class IO extends IOConstants
@@ -53,6 +53,8 @@ abstract class IO extends IOConstants
 	
 	def writeByteChars( s: String )
 	
+//// end of abstract methods
+	
 // 	def increase( s: Long ): Long = {
 // 		val p = size
 // 		
@@ -66,6 +68,14 @@ abstract class IO extends IOConstants
 	def putBig( l: Long ) {
 		putByte( (l>>32).asInstanceOf[Int] )
 		putInt( l.asInstanceOf[Int] )
+	}
+	
+	def addBig( len: Int ) {
+		val cur = pos
+		val v = getBig
+		
+		pos = cur
+		putBig( v + len )
 	}
 	
 	def getByte( addr: Long ): Int = {
@@ -106,7 +116,14 @@ abstract class IO extends IOConstants
 
 	def skip( len: Long ) = pos += len
 	
-	def skipBig = skip( PWIDTH )
+	def skipByte = pos += 1
+	
+	def skipByte( addr: Long ) {
+		pos = addr
+		skipByte
+	}
+	
+	def skipBig = skip( BWIDTH )
 	
 	def skipInt = skip( 4 )
 	
@@ -122,6 +139,8 @@ abstract class IO extends IOConstants
 		for (_ <- 1L to n)
 			putByte( 0 )
 			
+	def padBig = pad( BWIDTH )
+	
 	def readByteChars( len: Int ) = {
 		val buf = new StringBuilder
 		
@@ -225,13 +244,14 @@ abstract class IO extends IOConstants
 				case INT => getInt
 				case LONG => getLong
 				case DOUBLE => getDouble
-				case NIL => ""
 				case STRING => getString
 				case EMPTY => Map.empty
 				case OBJECT => getObject
+				case NIL => Nil
+				case ARRAY => getArray
 			}
 	
-		pos = cur + 9
+		pos = cur + VWIDTH
 		res
 	}
 	
@@ -256,9 +276,6 @@ abstract class IO extends IOConstants
 			case a: Double =>
 				putByte( DOUBLE )
 				putDouble( a )
-			case "" =>
-				putByte( NIL )
-				pad( 8 )
 			case a: String =>
 				val cur = pos
 				putByte( STRING )
@@ -269,7 +286,13 @@ abstract class IO extends IOConstants
 				pad( 8 )
 			case a: collection.Map[_, _] =>
 				putByte( OBJECT )
-				sys.error( "asdf" )
+				sys.error( "OBJECT" )
+			case a: collection.Seq[_] if a isEmpty =>
+				putByte( NIL )
+				pad( 8 )
+			case a: collection.Seq[_] if a isEmpty =>
+				putByte( ARRAY )
+				sys.error( "ARRAY" )
 		}
 	}
 	
@@ -292,27 +315,65 @@ abstract class IO extends IOConstants
 		while (pos - start < len) {
 			if (getByte == USED)
 				map += getValue -> getValue
+			else {
+				skipValue
+				skipValue
+			}
 		}
 
 		map
 	}
 	
 	def putObject( a: collection.Map[_, _] ) {
-		putBig( 0 )	// continuation pointer
+		padBig	// continuation pointer
 		
 		val start = pos
 	
-		skipBig	// size of object in bytes
+		padBig	// size of object in bytes
 		
-		for ((k, v) <- a) {
-			putByte( USED )
-			putValue( k )
-			putValue( v )
-		}
-		
-		val len = pos - start - PWIDTH
+		for (p <- a)
+			putPair( p )
 	
-		putBig( start, len )
+		putBig( start, pos - start - BWIDTH )
+	}
+	
+	def putPair( kv: (Any, Any) ) {
+		putByte( USED )
+		putValue( kv._1 )
+		putValue( kv._2 )
+	}
+	
+	def putPair( addr: Long, kv: (Any, Any) ) {
+		pos = addr
+		putPair( kv )
+	}
+	
+	def getArray = {
+		val buf = new ListBuffer[Any]
+		val len = getBig
+		val start = pos
+
+		while (pos - start < len) {
+			if (getByte == USED)
+				buf += getValue
+		}
+
+		buf.toList
+	}
+	
+	def putArray( s: collection.TraversableOnce[Any] ) {
+		padBig	// continuation pointer
+		
+		val start = pos
+	
+		padBig	// size of object in bytes
+		
+		for (e <- s) {
+			putByte( USED )
+			putValue( s )
+		}
+	
+		putBig( start, pos - start - BWIDTH )
 	}
 	
 	def dump {
