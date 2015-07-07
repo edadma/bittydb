@@ -116,26 +116,26 @@ abstract class IO extends IOConstants
 	
 	def skipString = skip( getLen )
 	
-	def skipValue =
-		(getByte match {
-			case POINTER =>
-				pos = getBig
-				getByte
-			case b =>
-				b
-		}) match {
-			case NULL|FALSE|TRUE|NIL|EMPTY => 
-			case INT => skipInt
-			case LONG => skipLong
-			case DOUBLE => skipDouble
-			case STRING => skipString
-			case OBJECT =>
-				skipBig
-				skip( getBig )
-		}
+	def skipValue = skip( 9 )
+// 		getByte match {
+// 			case POINTER =>
+// 				pos = getBig
+// 				getByte
+// 			case b =>
+// 				b
+// 		}) match {
+// 			case NULL|FALSE|TRUE|NIL|EMPTY => 
+// 			case INT => skipInt
+// 			case LONG => skipLong
+// 			case DOUBLE => skipDouble
+// 			case STRING => skipString
+// 			case OBJECT =>
+// 				skipBig
+// 				skip( getBig )
+// 		}
 	
-	def pad( n: Int ) =
-		for (_ <- 1 to n)
+	def pad( n: Long ) =
+		for (_ <- 1L to n)
 			putByte( 0 )
 			
 	def readByteChars( len: Int ) = {
@@ -219,38 +219,45 @@ abstract class IO extends IOConstants
 	
 	def strlen( s: String ) = s.getBytes( charset ).length
 
-	def getValue: Any =
-		(getByte match {
-			case POINTER =>
-				pos = getBig
-				getByte
-			case b =>
-				b
-		}) match {
-			case NULL => null
-			case FALSE => false
-			case TRUE => true
-			case INT => getInt
-			case LONG => getLong
-			case DOUBLE => getDouble
-			case NIL => ""
-			case STRING => getString
-			case EMPTY => Map.empty
-			case OBJECT => getObject
-			case t => sys.error( "unrecognized value type: " + t )
-		}
+	def getValue: Any = {
+		val cur = pos
+		val res =
+			(getByte match {
+				case POINTER => getByte( getBig )
+				case b => b
+			}) match {
+				case NULL => null
+				case FALSE => false
+				case TRUE => true
+				case INT => getInt
+				case LONG => getLong
+				case DOUBLE => getDouble
+				case NIL => ""
+				case STRING => getString
+				case EMPTY => Map.empty
+				case OBJECT => getObject
+				case t => sys.error( "unrecognized value type: " + t )
+			}
+	
+		pos = cur + 9
+		res
+	}
 	
 	def putValue( v: Any ) {
 		v match {
 			case null =>
 				putByte( NULL )
+				pad( 8 )
 			case false =>
 				putByte( FALSE )
+				pad( 8 )
 			case true =>
 				putByte( TRUE )
+				pad( 8 )
 			case a: Int =>
 				putByte( INT )
 				putInt( a )
+				pad( 4 )
 			case a: Long =>
 				putByte( LONG )
 				putLong( a )
@@ -259,11 +266,15 @@ abstract class IO extends IOConstants
 				putDouble( a )
 			case "" =>
 				putByte( NIL )
+				pad( 8 )
 			case a: String =>
+				val cur = pos
 				putByte( STRING )
 				putString( a )
+				pad( 9 - (pos - cur) )
 			case a: collection.Map[_, _] if a isEmpty =>
 				putByte( EMPTY )
+				pad( 8 )
 			case a: collection.Map[_, _] =>
 				putByte( OBJECT )
 				sys.error( "asdf" )
