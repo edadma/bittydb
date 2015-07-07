@@ -4,6 +4,8 @@ import java.io.File
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
 
+import util.Either
+
 
 object Connection
 {
@@ -31,7 +33,7 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 		io putBig freeList
 		root = new Pointer( io.pos )
 		io putByte OBJECT
-		io putObject Map.empty
+		io putObject Map( "a" -> 1, "b" -> 2 )//Map.empty
 		io.force
 	}
 	else
@@ -66,35 +68,47 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 			io.putValue( addr, v )
 		}
 		
-// 		def find( key: Any ): (Boolean, Option[Long]) =
-// 			io.getByte( addr ) match {
-// 				case EMPTY =>
-// 					sys.error( "empty object" )//(false, None)
-// 				case OBJECT =>
-// 					val cont = io.getBig
-// 					val len = io.getBig
-// 					val start = io.pos
-// 					var where: Option[Long] = None
-// 					
-// 					while (io.pos - start < len) {
-// 						val addr = pos
-// 						
-// 						if (io.getByte == USED)
-// 							if (io.getValue == key)
-// 								return (true, Some( addr ))
-// 							else
-// 								io.skipValue
-// 					}
-// 				case _ =>
-// 					sys.error( "can only use 'find' for an object" )
-// 			}
+		private [bittydb] def lookup( key: Any ): Either[Option[Long], Long] = {
+			val cont = io.getBig
+			val len = io.getBig
+			val start = io.pos
+			var where: Option[Long] = None
+			
+			while (io.pos - start < len) {
+				val addr = io.pos
+				
+				if (io.getByte == USED)
+					if (io.getValue == key)
+						return Right( addr )
+					else
+						io.skipValue
+				else if (where == None)
+					where = Some( io.pos - 1 )
+			}
+			
+			Left( where )
+		}
+		
+		def find( key: Any ) =
+			io.getByte( addr ) match {
+				case EMPTY =>
+					sys.error( "empty object" )//(false, None)
+				case OBJECT =>
+				case _ =>
+					sys.error( "can only use 'find' for an object" )
+			}
 		
 		def set( kv: (Any, Any) ) {
 			io.getByte( addr ) match {
 				case EMPTY =>
 					io.putValue( addr, Map(kv) )
 				case OBJECT =>
-					io.putValue( addr, io.getValue(addr).asInstanceOf[Map[Any, Any]] + kv )
+					lookup( kv._1 ) match {
+						case Left( None ) => sys.error( "no insertion point" )
+						case Left( Some(insertion) ) => sys.error( "insertion point found" )
+						case Right( at ) =>
+							io.putValue( kv._2 )
+					}
 				case _ =>
 					sys.error( "can only use 'set' for an object" )
 			}
