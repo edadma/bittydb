@@ -106,10 +106,38 @@ abstract class IO extends IOConstants
 
 	def skip( len: Long ) = pos += len
 	
-	def skipSize = skip( SWIDTH )
+	def skipBig = skip( PWIDTH )
 	
-	def skipPointer = skip( PWIDTH )
+	def skipInt = skip( 4 )
 	
+	def skipLong = skip( 8 )
+	
+	def skipDouble = skip( 8 )
+	
+	def skipString = skip( getLen )
+	
+	def skipValue =
+		(getByte match {
+			case POINTER =>
+				pos = getBig
+				getByte
+			case b =>
+				b
+		}) match {
+			case NULL|FALSE|TRUE|NIL|EMPTY => 
+			case INT => skipInt
+			case LONG => skipLong
+			case DOUBLE => skipDouble
+			case STRING => skipString
+			case OBJECT =>
+				skipBig
+				skip( getBig )
+		}
+	
+	def pad( n: Int ) =
+		for (_ <- 1 to n)
+			putByte( 0 )
+			
 	def readByteChars( len: Int ) = {
 		val buf = new StringBuilder
 		
@@ -208,16 +236,8 @@ abstract class IO extends IOConstants
 			case NIL => ""
 			case STRING => getString
 			case EMPTY => Map.empty
-			case OBJECT =>
-				val cont = getBig
-				val len = getBig
-				val start = pos
-				var map = Map.empty[Any, Any]
-				
-				while (pos - start < len)
-					map += getValue -> getValue
-					
-				map
+			case OBJECT => getObject
+			case t => sys.error( "unrecognized value type: " + t )
 		}
 	
 	def putValue( v: Any ) {
@@ -246,20 +266,7 @@ abstract class IO extends IOConstants
 				putByte( EMPTY )
 			case a: collection.Map[_, _] =>
 				putByte( OBJECT )
-				putBig( 0 )	// continuation pointer
-				
-			val start = pos
-			
-				skipSize	// size of object in bytes
-				
-				for ((k, v) <- a) {
-					putValue( k )
-					putValue( v )
-				}
-				
-			val len = pos - start - SWIDTH
-			
-				putBig( start, len )
+				sys.error( "asdf" )
 		}
 	}
 	
@@ -271,6 +278,38 @@ abstract class IO extends IOConstants
 	def putValue( addr: Long, v: Any ) {
 		pos = addr
 		putValue( v )
+	}
+	
+	def getObject = {
+		val cont = getBig
+		val len = getBig
+		val start = pos
+		var map = Map.empty[Any, Any]
+
+		while (pos - start < len) {
+			if (getByte == USED)
+				map += getValue -> getValue
+		}
+
+		map
+	}
+	
+	def putObject( a: collection.Map[_, _] ) {
+		putBig( 0 )	// continuation pointer
+		
+		val start = pos
+	
+		skipBig	// size of object in bytes
+		
+		for ((k, v) <- a) {
+			putByte( USED )
+			putValue( k )
+			putValue( v )
+		}
+		
+		val len = pos - start - PWIDTH
+	
+		putBig( start, len )
 	}
 	
 	def dump {

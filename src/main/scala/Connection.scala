@@ -14,7 +14,7 @@ object Connection
 	def mem( charset: Charset = UTF_8 ) = new Connection( new MemIO, charset )
 }
 
-class Connection( private [bittydb] val io: IO, charset: Charset )
+class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOConstants
 {
 	private [bittydb] var version: String = _
 	private [bittydb] var freeListPtr: Long = _
@@ -30,7 +30,8 @@ class Connection( private [bittydb] val io: IO, charset: Charset )
 		freeList = 0
 		io putBig freeList
 		root = new Pointer( io.pos )
-		io putValue Map.empty
+		io putByte OBJECT
+		io putObject Map.empty
 		io.force
 	}
 	else
@@ -58,18 +59,42 @@ class Connection( private [bittydb] val io: IO, charset: Charset )
 	
 	override def toString = "connection to " + io
 	
-	class Pointer( addr: Long ) extends IOConstants {
+	class Pointer( addr: Long ) {
 		def get = io.getValue( addr )
 		
 		def put( v: Any ) {
 			io.putValue( addr, v )
 		}
 		
+// 		def find( key: Any ): (Boolean, Option[Long]) =
+// 			io.getByte( addr ) match {
+// 				case EMPTY =>
+// 					sys.error( "empty object" )//(false, None)
+// 				case OBJECT =>
+// 					val cont = io.getBig
+// 					val len = io.getBig
+// 					val start = io.pos
+// 					var where: Option[Long] = None
+// 					
+// 					while (io.pos - start < len) {
+// 						val addr = pos
+// 						
+// 						if (io.getByte == USED)
+// 							if (io.getValue == key)
+// 								return (true, Some( addr ))
+// 							else
+// 								io.skipValue
+// 					}
+// 				case _ =>
+// 					sys.error( "can only use 'find' for an object" )
+// 			}
+		
 		def set( kv: (Any, Any) ) {
 			io.getByte( addr ) match {
 				case EMPTY =>
 					io.putValue( addr, Map(kv) )
 				case OBJECT =>
+					io.putValue( addr, io.getValue(addr).asInstanceOf[Map[Any, Any]] + kv )
 				case _ =>
 					sys.error( "can only use 'set' for an object" )
 			}

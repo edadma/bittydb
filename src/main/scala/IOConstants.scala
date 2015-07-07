@@ -16,6 +16,8 @@ trait IOConstants {
 	val OBJECT = 11
 	val POINTER = 12
 	
-	val SWIDTH = 5	// size width
 	val PWIDTH = 5	// pointer width
+	
+	val USED = 0
+	val UNUSED = 1
 }
