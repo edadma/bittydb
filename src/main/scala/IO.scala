@@ -117,22 +117,6 @@ abstract class IO extends IOConstants
 	def skipString = skip( getLen )
 	
 	def skipValue = skip( 9 )
-// 		getByte match {
-// 			case POINTER =>
-// 				pos = getBig
-// 				getByte
-// 			case b =>
-// 				b
-// 		}) match {
-// 			case NULL|FALSE|TRUE|NIL|EMPTY => 
-// 			case INT => skipInt
-// 			case LONG => skipLong
-// 			case DOUBLE => skipDouble
-// 			case STRING => skipString
-// 			case OBJECT =>
-// 				skipBig
-// 				skip( getBig )
-// 		}
 	
 	def pad( n: Long ) =
 		for (_ <- 1L to n)
@@ -219,13 +203,22 @@ abstract class IO extends IOConstants
 	
 	def strlen( s: String ) = s.getBytes( charset ).length
 
+	def getType: Int =
+		getByte match {
+			case POINTER => getByte( getBig )
+			case t if t >= 0 => t
+			case t => sys.error( "unrecognized value type: " + t )
+		}
+
+	def getType( addr: Long ): Int = {
+		pos = addr
+		getType
+	}
+	
 	def getValue: Any = {
 		val cur = pos
 		val res =
-			(getByte match {
-				case POINTER => getByte( getBig )
-				case b => b
-			}) match {
+			getType match {
 				case NULL => null
 				case FALSE => false
 				case TRUE => true
@@ -236,7 +229,6 @@ abstract class IO extends IOConstants
 				case STRING => getString
 				case EMPTY => Map.empty
 				case OBJECT => getObject
-				case t => sys.error( "unrecognized value type: " + t )
 			}
 	
 		pos = cur + 9

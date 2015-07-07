@@ -33,7 +33,7 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 		io putBig freeList
 		root = new Pointer( io.pos )
 		io putByte OBJECT
-		io putObject Map( "a" -> 1, "b" -> 2 )//Map.empty
+		io putObject Map.empty
 		io.force
 	}
 	else
@@ -89,29 +89,45 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 			Left( where )
 		}
 		
-		def find( key: Any ) =
-			io.getByte( addr ) match {
-				case EMPTY =>
-					sys.error( "empty object" )//(false, None)
-				case OBJECT =>
-				case _ =>
-					sys.error( "can only use 'find' for an object" )
+		def find( key: Any ): Option[Pointer] =
+			io.getType( addr ) match {
+				case EMPTY => None
+				case OBJECT => None
+				case _ => sys.error( "can only use 'find' for an object" )
 			}
 		
+		private [bittydb] def atEnd =
+			io.getType( addr ) match {
+				case OBJECT =>
+				case STRING =>
+			}
+			
 		def set( kv: (Any, Any) ) {
-			io.getByte( addr ) match {
-				case EMPTY =>
-					io.putValue( addr, Map(kv) )
+			io.getType( addr ) match {
+				case EMPTY => io.putValue( addr, Map(kv) )
 				case OBJECT =>
 					lookup( kv._1 ) match {
-						case Left( None ) => sys.error( "no insertion point" )
+						case Left( None ) =>
+							
 						case Left( Some(insertion) ) => sys.error( "insertion point found" )
-						case Right( at ) =>
-							io.putValue( kv._2 )
+						case Right( at ) => io.putValue( kv._2 )
 					}
-				case _ =>
-					sys.error( "can only use 'set' for an object" )
+				case _ => sys.error( "can only use 'set' for an object" )
 			}
 		}
+		
+		override def toString =
+			io.getType( addr ) match {
+				case NULL => "null"
+				case FALSE => "false"
+				case TRUE => "true"
+				case INT => "integer"
+				case LONG => "long integer"
+				case DOUBLE => "double"
+				case NIL => "empty string"
+				case STRING => "string"
+				case EMPTY => "empty object"
+				case OBJECT => "object"
+			}
 	}
 }

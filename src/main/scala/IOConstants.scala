@@ -2,6 +2,7 @@ package ca.hyperreal.bittydb
 
 
 trait IOConstants {
+	val POINTER = -1
 	val NULL = 0
 	val TRUE = 1
 	val FALSE = 2
@@ -14,7 +15,6 @@ trait IOConstants {
 	val STRING = 9
 	val EMPTY = 10
 	val OBJECT = 11
-	val POINTER = 12
 	
 	val PWIDTH = 5	// pointer width
 	
