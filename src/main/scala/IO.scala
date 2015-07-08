@@ -374,20 +374,29 @@ abstract class IO extends IOConstants
 	}
 	
 	def getObject = {
-		val cont = getBig
-		val len = getBig
-		val start = pos
-		var map = Map.empty[Any, Any]
+		var map = new HashMap[Any, Any]
+		
+		def chunk {
+			val cont = getBig
+			val len = getBig
+			val start = pos
 
-		while (pos - start < len) {
-			if (getByte == USED)
-				map += getValue -> getValue
-			else {
-				skipValue
-				skipValue
+			while (pos - start < len) {
+				if (getByte == USED)
+					map += getValue -> getValue
+				else {
+					skipValue
+					skipValue
+				}
+			}
+			
+			if (cont > 0) {
+				pos = cont
+				chunk
 			}
 		}
 
+		chunk
 		map
 	}
 	
@@ -458,10 +467,14 @@ abstract class IO extends IOConstants
 			
 			val mark = pos
 			
-			for (i <- line until ((line + width) min size))
+			for (i <- line until ((line + width) min size)) {
+				if (i%16 == 8)
+					print( ' ' )
+					
 				printByte( getByte )
-				
-			print( " "*((width - (pos - mark).asInstanceOf[Int])*3 + 2) )
+			}
+			
+			print( " "*((width - (pos - mark).asInstanceOf[Int])*3 + 1) )
 			
 			pos = mark
 			
