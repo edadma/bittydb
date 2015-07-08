@@ -18,9 +18,9 @@ object Main extends App
 	db.io.dump
 	println( db.root.get )
 	
-// 	println( db.root.remove( "qwer" ) )
-// 	db.io.dump
-// 	println( db.root.get )
+	println( db.root.remove( "second large key value" ) )
+	db.io.dump
+	println( db.root.get )
 	
 // 	db.root.set( "b" -> 0x7890 )
 // 	db.io.dump

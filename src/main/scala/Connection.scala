@@ -69,29 +69,42 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 		}
 		
 		private [bittydb] def lookup( key: Any ): Either[Option[Long], Long] = {
-			val cont = io.getBig
-			val len = io.getBig
-			val start = io.pos
 			var where: Option[Long] = None
 			
-			while (io.pos - start < len) {
-				val addr = io.pos
+			def chunk: Option[Long] = {
+				val cont = io.getBig
+				val len = io.getBig
+				val start = io.pos
 				
-				if (io.getByte == USED)
-					if (io.getValue == key)
-						return Right( addr )
-					else
+				while (io.pos - start < len) {
+					val addr = io.pos
+					
+					if (io.getByte == USED)
+						if (io.getValue == key)
+							return Some( addr )
+						else
+							io.skipValue
+					else {
+						if (where == None)
+							where = Some( io.pos - 1 )
+							
 						io.skipValue
-				else {
-					if (where == None)
-						where = Some( io.pos - 1 )
-						
-					io.skipValue
-					io.skipValue
+						io.skipValue
+					}
 				}
+				
+				if (cont > 0) {
+					io.pos = cont
+					chunk
+				}
+				else
+					None
 			}
 			
-			Left( where )
+			chunk match {
+				case Some( addr ) => Right( addr )
+				case None => Left( where )
+			}
 		}
 		
 		def remove( key: Any ) =
