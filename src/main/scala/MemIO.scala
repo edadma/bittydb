@@ -22,58 +22,81 @@ class MemIO extends IO
 		size
 	}
 	
-	def getByte: Byte = db.buffer.get
+	def getByte: Byte = {
+		db.getting( 1 )
+		db.buffer.get
+	}
 	
 	def putByte( b: Int ) {
-		db.need( 1 )
+		db.putting( 1 )
 		db.buffer.put( b.asInstanceOf[Byte] )
 	}
 	
 	def getBytes( len: Int ): Array[Byte] = {
+		db.getting( len )
+		
 		val res = new Array[Byte]( len )
 		
 		db.buffer.get( res )
 		res
 	}
 	
-	def putBytes( a: Array[Byte] ) = db.buffer.put( a )
+	def putBytes( a: Array[Byte] ) = {
+		db.putting( a.length )
+		db.buffer.put( a )
+	}
 	
 	def getUnsignedByte: Int = getByte&0xFF
 	
-	def getChar: Char = db.buffer.getChar
+	def getChar: Char = {
+		db.getting( 2 )
+		db.buffer.getChar
+	}
 	
 	def putChar( c: Char ) {
-		db.need( 2 )
+		db.putting( 2 )
 		db.buffer.putChar( c )
 	}
 	
-	def getShort: Short = db.buffer.getShort
+	def getShort: Short = {
+		db.getting( 2 )
+		db.buffer.getShort
+	}
 	
 	def putShort( s: Int ) {
-		db.need( 2 )
+		db.putting( 2 )
 		db.buffer.putShort( s.asInstanceOf[Short] )
 	}
 	
 	def getUnsignedShort: Int = getShort&0xFFFF
 	
-	def getInt: Int = db.buffer.getInt
+	def getInt: Int = {
+		db.getting( 4 )
+		db.buffer.getInt
+	}
 	
 	def putInt( i: Int ) {
-		db.need( 4 )
+		db.putting( 4 )
 		db.buffer.putInt( i )
 	}
 	
-	def getLong: Long = db.buffer.getLong
+	def getLong: Long = {
+		db.getting( 8 )
+		db.buffer.getLong
+	}
 	
 	def putLong( l: Long ) {
-		db.need( 8 )
+		db.putting( 8 )
 		db.buffer.putLong( l )
 	}
 	
-	def getDouble: Double = db.buffer.getDouble
+	def getDouble: Double = {
+		db.getting( 8 )
+		db.buffer.getDouble
+	}
 	
 	def putDouble( d: Double ) {
-		db.need( 8 )
+		db.putting( 8 )
 		db.buffer.putDouble( d )
 	}
 
@@ -83,7 +106,10 @@ class MemIO extends IO
 		if (buf.size > Int.MaxValue)
 			sys.error( "too big" )
 			
-		db.buffer.put( buf.db.buffer.array, 0, buf.size.asInstanceOf[Int] )
+		val len = buf.size.asInstanceOf[Int]
+		
+		db.putting( len )
+		db.buffer.put( buf.db.buffer.array, 0, len )
 	}
 	
 	override def toString = "mem"

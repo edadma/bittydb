@@ -11,10 +11,8 @@ class AllocIO extends MemIO {
 
 	def totalSize: Long = size + allocSize
 	
-	def writeBackpatches( dest: IO, base: Long ) {
+	def writeBackpatches( base: Long ) {
 		for ((io, src, target) <- backpatches)
 			io.putBig( src, base + target )
-			
-//		allocs foreach (_.writeBackpatches( base + size ))
 	}
 }

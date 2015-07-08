@@ -41,8 +41,15 @@ abstract class IO extends IOConstants
 		var offset = 0L
 		
 		for (a <- allocs) {
-			a.writeBackpatches( dest, pos + offset )
+			a.writeBackpatches( pos + offset )
 			offset += a.size
+		}
+		
+		if (dest ne this)
+			dest.writeBuffer( this.asInstanceOf[MemIO] )
+			
+		for (a <- allocs) {
+			a.writeAllocs( dest )
 		}
 	}
 	
@@ -133,6 +140,11 @@ abstract class IO extends IOConstants
 		
 		pos = cur
 		putBig( v + len )
+	}
+	
+	def getUnsignedByte( addr: Long ): Int = {
+		pos = addr
+		getUnsignedByte
 	}
 	
 	def getByte( addr: Long ): Int = {
@@ -242,16 +254,16 @@ abstract class IO extends IOConstants
 		putBytes( s )
 	}
 	
-	def encode( s: String ) = {println(charset);s.getBytes( charset )}
+	def encode( s: String ) = s.getBytes( charset )
 	
 	def putString( s: String ) {putString( encode(s) )}
 
 	def getType: Int =
-		(getByte match {
-			case POINTER => getByte( getBig )
+		getUnsignedByte match {
+			case POINTER => getUnsignedByte( getBig )
 			case t => t
 //			case t => sys.error( "unrecognized value type: " + t )
-		})&0xFF
+		}
 
 	def getType( addr: Long ): Int = {
 		pos = addr
@@ -268,6 +280,8 @@ abstract class IO extends IOConstants
 				case INT => getInt
 				case LONG => getLong
 				case DOUBLE => getDouble
+				case sstr if (sstr&0xF0) == SSTRING =>
+					new String( getBytes(sstr&0x0F) )
 				case STRING => getString
 				case EMPTY => Map.empty
 				case MEMBERS => getObject
@@ -306,8 +320,8 @@ abstract class IO extends IOConstants
 				if (s.length > VWIDTH - 1) {
 					val io = allocPrimitive
 					
-					io.putByte( SSTRING )
-					io.putString( s )
+					io.putByte( SSTRING|s.length )
+					io.putBytes( s )
 				}
 				else {
 					val cur = pos

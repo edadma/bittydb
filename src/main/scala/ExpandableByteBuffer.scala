@@ -33,7 +33,9 @@ class ExpandableByteBuffer
 		res
 	}
 	
-	def need( bytes: Int ) = sizeHint( _buffer.position + bytes )
+	def getting( bytes: Int ) = assert( _buffer.position + bytes <= _size, "attempting to read past end of buffer" )
+	
+	def putting( bytes: Int ) = sizeHint( _buffer.position + bytes )
 	
 	def sizeHint( len: Int ) {
 		if (len > array.length && len >= 1) {

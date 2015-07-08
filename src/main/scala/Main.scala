@@ -8,9 +8,9 @@ object Main extends App
 	db.io.dump
 	println( db.root.get )
 	
-	db.root.set( "asdf" -> 0x1234 )
+//	db.root.set( "asdf" -> 0x1234 )
 //	db.root.set( "qwer" -> 0x5678 )
-//	db.root.set( "zxcv" -> "this is a test" )
+	db.root.set( "zxcv" -> "this is a test" )
 	db.io.dump
 	println( db.root.get )
 	
