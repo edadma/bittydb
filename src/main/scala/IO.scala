@@ -8,6 +8,32 @@ import collection.mutable.{ListBuffer, HashMap}
 abstract class IO extends IOConstants
 {
 	private [bittydb] var charset: Charset = null
+	private [bittydb] val allocs = new ListBuffer[AllocIO]
+	private [bittydb] var primitive: AllocIO = null
+	
+	def allocPrimitive = {
+		putByte( POINTER )
+		
+		if (primitive eq null) {
+			primitive = new AllocIO( this, pos )
+			allocs += primitive
+		}
+		else
+			primitive
+				
+		padBig
+		primitive
+	}
+	
+	def allocComposite = {
+		putByte( POINTER )
+		
+		val res = new AllocIO( this, pos )
+		
+		padBig
+		allocs += res
+		res
+	}
 	
 	def close
 	
@@ -53,15 +79,9 @@ abstract class IO extends IOConstants
 	
 	def writeByteChars( s: String )
 	
-//// end of abstract methods
+	def writeBuffer( buf: MemIO )
 	
-// 	def increase( s: Long ): Long = {
-// 		val p = size
-// 		
-// 		size = size + s
-// 		pos = p
-// 		p
-// 	}
+//// end of abstract methods
 	
 	def getBig: Long = (getByte.asInstanceOf[Long]&0xFF)<<32 | getInt.asInstanceOf[Long]&0xFFFFFFFFL
 	
@@ -150,15 +170,6 @@ abstract class IO extends IOConstants
 		buf.toString
 	}
 
-// 	def readChars( len: Int ) = {
-// 		val buf = new StringBuilder
-// 		
-// 		for (_ <- 1 to len)
-// 			buf += getChar
-// 			
-// 		buf.toString
-// 	}
-
 	def getByteString = {
 		if (remaining >= 1) {
 			val len = getUnsignedByte
@@ -213,14 +224,14 @@ abstract class IO extends IOConstants
 	
 	def getString = new String( getBytes(getLen), charset )
 	
-	def putString( s: String ) = {
-		val buf = s.getBytes( charset )
-		
-		putLen( buf.length )
-		putBytes( buf )
+	def putString( s: Array[Byte] ) {
+		putLen( s.length )
+		putBytes( s )
 	}
 	
-	def strlen( s: String ) = s.getBytes( charset ).length
+	def encode( s: String ) = s.getBytes(charset)
+	
+	def putString( s: String ) {putString( encode(s) )}
 
 	def getType: Int =
 		getByte match {
@@ -277,24 +288,47 @@ abstract class IO extends IOConstants
 				putByte( DOUBLE )
 				putDouble( a )
 			case a: String =>
-				val cur = pos
-				putByte( STRING )
-				putString( a )
-				pad( 9 - (pos - cur) )
+				val s = encode( a )
+				
+				if (s.length > VWIDTH - 2) {
+					val io = allocPrimitive
+					
+					io.putByte( STRING )
+					io.putString( s )
+				}
+				else {
+					val cur = pos
+					putByte( STRING )
+					putString( s )
+					pad( 9 - (pos - cur) )
+				}
 			case a: collection.Map[_, _] if a isEmpty =>
 				putByte( EMPTY )
 				pad( 8 )
 			case a: collection.Map[_, _] =>
-				putByte( OBJECT )
-				sys.error( "OBJECT" )
+				val io = allocComposite
+				
+				io.putByte( OBJECT )
+				io.putObject( a )
 			case a: collection.Seq[_] if a isEmpty =>
 				putByte( NIL )
 				pad( 8 )
-			case a: collection.Seq[_] if a isEmpty =>
+			case a: collection.Seq[_] =>
 				putByte( ARRAY )
 				sys.error( "ARRAY" )
 		}
 	}
+	
+	def atEnd = pos == size - 1
+	
+// 	def pointer( p: Append ) = {
+// 		putByte( POINTER )
+// 		
+// 		val res = alloc
+// 		
+// 		padBig	//putBig( if (atEnd) pos + BWIDTH else size )
+// 		res
+// 	}
 	
 	def getValue( addr: Long ): Any = {
 		pos = addr
@@ -324,14 +358,14 @@ abstract class IO extends IOConstants
 		map
 	}
 	
-	def putObject( a: collection.Map[_, _] ) {
+	def putObject( m: collection.Map[_, _] ) {
 		padBig	// continuation pointer
 		
 		val start = pos
 	
 		padBig	// size of object in bytes
 		
-		for (p <- a)
+		for (p <- m)
 			putPair( p )
 	
 		putBig( start, pos - start - BWIDTH )

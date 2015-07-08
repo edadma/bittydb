@@ -136,7 +136,11 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 								io.skipBig
 								io.addBig( PWIDTH )
 								io.append
-								io.putPair( kv )
+								
+								val a = new AllocIO( io )
+								
+								a.putPair( kv )
+								a.done( true )
 							}
 							else {
 								io.skipByte( addr )
