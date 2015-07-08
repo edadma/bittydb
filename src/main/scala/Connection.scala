@@ -136,11 +136,7 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 								io.skipBig
 								io.addBig( PWIDTH )
 								io.append
-								
-								val a = new AllocIO( io )
-								
-								a.putPair( kv )
-								a.done( true )
+								io.putPair( kv )
 							}
 							else {
 								io.skipByte( addr )
@@ -152,6 +148,8 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 							io.putPair( insertion, kv )
 						case Right( at ) => io.putValue( kv._2 )
 					}
+					
+					io.finish
 				case _ => sys.error( "can only use 'set' for an object" )
 			}
 		}

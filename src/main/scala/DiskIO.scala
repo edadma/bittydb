@@ -6,7 +6,7 @@ import java.io._
 class DiskIO( f: File ) extends IO
 {
 	private lazy val file = new RandomAccessFile( f, "rw" )
-	
+
 	def close = file.close
 	
 	def force = file.getChannel.force( true )
@@ -29,6 +29,15 @@ class DiskIO( f: File ) extends IO
 	def getByte: Byte = file.readByte
 	
 	def putByte( b: Int ) = file.writeByte( b )
+	
+	def getBytes( len: Int ): Array[Byte] = {
+		val res = new Array[Byte]( len )
+		
+		file.readFully( res )
+		res
+	}
+	
+	def putBytes( a: Array[Byte] ) = file.write( a )
 	
 	def getUnsignedByte: Int = file.readUnsignedByte
 	

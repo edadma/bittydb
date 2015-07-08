@@ -29,6 +29,15 @@ class MemIO extends IO
 		db.buffer.put( b.asInstanceOf[Byte] )
 	}
 	
+	def getBytes( len: Int ): Array[Byte] = {
+		val res = new Array[Byte]( len )
+		
+		db.buffer.get( res )
+		res
+	}
+	
+	def putBytes( a: Array[Byte] ) = db.buffer.put( a )
+	
 	def getUnsignedByte: Int = getByte&0xFF
 	
 	def getChar: Char = db.buffer.getChar

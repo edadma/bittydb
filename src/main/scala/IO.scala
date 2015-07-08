@@ -15,12 +15,13 @@ abstract class IO extends IOConstants
 		putByte( POINTER )
 		
 		if (primitive eq null) {
-			primitive = new AllocIO( this, pos )
+			primitive = new AllocIO
 			allocs += primitive
 		}
 		else
 			primitive
-				
+		
+		primitive.backpatch( this, pos )
 		padBig
 		primitive
 	}
@@ -28,12 +29,34 @@ abstract class IO extends IOConstants
 	def allocComposite = {
 		putByte( POINTER )
 		
-		val res = new AllocIO( this, pos )
+		val res = new AllocIO
 		
 		padBig
 		allocs += res
+		res.backpatch( this, pos )
 		res
 	}
+	
+	def writeAllocs( dest: IO ) {
+		var offset = 0L
+		
+		for (a <- allocs) {
+			a.writeBackpatches( dest, pos + offset )
+			offset += a.size
+		}
+	}
+	
+	def finish {
+		val len = allocSize
+		
+		// allocate space
+		append
+		writeAllocs( this )
+		allocs.clear
+		primitive = null
+	}
+
+	def allocSize = allocs map (_.totalSize) sum
 	
 	def close
 	
@@ -52,6 +75,10 @@ abstract class IO extends IOConstants
 	def getByte: Byte
 	
 	def putByte( b: Int )
+	
+	def getBytes( len: Int ): Array[Byte]
+	
+	def putBytes( a: Array[Byte] )
 	
 	def getUnsignedByte: Int
 	
@@ -90,6 +117,16 @@ abstract class IO extends IOConstants
 		putInt( l.asInstanceOf[Int] )
 	}
 	
+	def getBig( addr: Long ): Long = {
+		pos = addr
+		getBig
+	}
+	
+	def putBig( addr: Long, l: Long ) {
+		pos = addr
+		putBig( l )
+	}
+	
 	def addBig( len: Int ) {
 		val cur = pos
 		val v = getBig
@@ -106,30 +143,6 @@ abstract class IO extends IOConstants
 	def putByte( addr: Long, b: Int ) {
 		pos = addr
 		putByte( b )
-	}
-	
-	def getBig( addr: Long ): Long = {
-		pos = addr
-		getBig
-	}
-	
-	def putBig( addr: Long, b: Long ) {
-		pos = addr
-		putBig( b )
-	}
-	
-	def getBytes( len: Int ) = {
-		val array = new Array[Byte]( len )
-		
-		for (i <- 0 until len)
-			array(i) = getByte
-			
-		array
-	}
-	
-	def putBytes( array: Array[Byte] ) {
-		for (b <- array)
-			putByte( b )
 	}
 	
 	def remaining: Long = size - pos
@@ -229,7 +242,7 @@ abstract class IO extends IOConstants
 		putBytes( s )
 	}
 	
-	def encode( s: String ) = s.getBytes(charset)
+	def encode( s: String ) = s.getBytes( charset )
 	
 	def putString( s: String ) {putString( encode(s) )}
 
@@ -257,9 +270,9 @@ abstract class IO extends IOConstants
 				case DOUBLE => getDouble
 				case STRING => getString
 				case EMPTY => Map.empty
-				case OBJECT => getObject
+				case MEMBERS => getObject
 				case NIL => Nil
-				case ARRAY => getArray
+				case ELEMENTS => getArray
 			}
 	
 		pos = cur + VWIDTH
@@ -290,10 +303,10 @@ abstract class IO extends IOConstants
 			case a: String =>
 				val s = encode( a )
 				
-				if (s.length > VWIDTH - 2) {
+				if (s.length > VWIDTH - 1) {
 					val io = allocPrimitive
 					
-					io.putByte( STRING )
+					io.putByte( SSTRING )
 					io.putString( s )
 				}
 				else {
@@ -308,13 +321,13 @@ abstract class IO extends IOConstants
 			case a: collection.Map[_, _] =>
 				val io = allocComposite
 				
-				io.putByte( OBJECT )
+				io.putByte( MEMBERS )
 				io.putObject( a )
 			case a: collection.Seq[_] if a isEmpty =>
 				putByte( NIL )
 				pad( 8 )
 			case a: collection.Seq[_] =>
-				putByte( ARRAY )
+				putByte( ELEMENTS )
 				sys.error( "ARRAY" )
 		}
 	}
