@@ -242,16 +242,16 @@ abstract class IO extends IOConstants
 		putBytes( s )
 	}
 	
-	def encode( s: String ) = s.getBytes( charset )
+	def encode( s: String ) = {println(charset);s.getBytes( charset )}
 	
 	def putString( s: String ) {putString( encode(s) )}
 
 	def getType: Int =
-		getByte match {
+		(getByte match {
 			case POINTER => getByte( getBig )
-			case t if t >= 0 => t
-			case t => sys.error( "unrecognized value type: " + t )
-		}
+			case t => t
+//			case t => sys.error( "unrecognized value type: " + t )
+		})&0xFF
 
 	def getType( addr: Long ): Int = {
 		pos = addr

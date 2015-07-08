@@ -32,7 +32,7 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 		freeList = 0
 		io putBig freeList
 		root = new Pointer( io.pos )
-		io putByte OBJECT
+		io putByte MEMBERS
 		io putObject Map.empty
 		io.force
 	}
@@ -97,7 +97,7 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 		def remove( key: Any ) =
 			io.getType( addr ) match {
 				case EMPTY => false
-				case OBJECT =>
+				case MEMBERS =>
 					lookup( key ) match {
 						case Left( _ ) => false
 						case Right( at ) =>
@@ -110,13 +110,13 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 		def find( key: Any ): Option[Pointer] =
 			io.getType( addr ) match {
 				case EMPTY => None
-				case OBJECT => None
+				case MEMBERS => None
 				case _ => sys.error( "can only use 'find' for an object" )
 			}
 		
 		private [bittydb] def atEnd =
 			io.getType( addr ) match {
-				case OBJECT =>
+				case MEMBERS =>
 					io.skipBig
 					io.pos + BWIDTH + io.getBig == io.size
 				case STRING => sys.error( "not yet" )
@@ -128,7 +128,7 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 		def set( kv: (Any, Any) ) {
 			io.getType( addr ) match {
 				case EMPTY => io.putValue( addr, Map(kv) )
-				case OBJECT =>
+				case MEMBERS =>
 					lookup( kv._1 ) match {
 						case Left( None ) =>
 							if (atEnd) {
@@ -162,10 +162,11 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 				case INT => "integer"
 				case LONG => "long integer"
 				case DOUBLE => "double"
-				case NIL => "empty string"
 				case STRING => "string"
+				case NIL => "empty array"
+				case ELEMENTS => "array"
 				case EMPTY => "empty object"
-				case OBJECT => "object"
+				case MEMBERS => "object"
 			}
 	}
 }
