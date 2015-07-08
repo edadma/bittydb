@@ -22,7 +22,7 @@ abstract class IO extends IOConstants
 			primitive
 		
 		primitive.backpatch( this, pos )
-		padBig
+		padValue
 		primitive
 	}
 	
@@ -31,19 +31,22 @@ abstract class IO extends IOConstants
 		
 		val res = new AllocIO
 		
-		padBig
 		allocs += res
 		res.backpatch( this, pos )
+		padValue
 		res
 	}
 	
 	def writeAllocs( dest: IO ) {
 		var offset = 0L
+		val cur = pos
 		
 		for (a <- allocs) {
 			a.writeBackpatches( pos + offset )
 			offset += a.size
 		}
+		
+		pos = cur
 		
 		if (dest ne this)
 			dest.writeBuffer( this.asInstanceOf[MemIO] )
@@ -186,6 +189,8 @@ abstract class IO extends IOConstants
 			
 	def padBig = pad( BWIDTH )
 	
+	def padValue = pad( 8 )
+	
 	def readByteChars( len: Int ) = {
 		val buf = new StringBuilder
 		
@@ -320,13 +325,14 @@ abstract class IO extends IOConstants
 				if (s.length > VWIDTH - 1) {
 					val io = allocPrimitive
 					
-					io.putByte( SSTRING|s.length )
-					io.putBytes( s )
+					io.putByte( STRING )
+					io.putString( s )
 				}
 				else {
 					val cur = pos
-					putByte( STRING )
-					putString( s )
+					
+					putByte( SSTRING|s.length )
+					putBytes( s )
 					pad( 9 - (pos - cur) )
 				}
 			case a: collection.Map[_, _] if a isEmpty =>

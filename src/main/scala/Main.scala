@@ -10,7 +10,7 @@ object Main extends App
 	
 //	db.root.set( "asdf" -> 0x1234 )
 //	db.root.set( "qwer" -> 0x5678 )
-	db.root.set( "zxcv" -> "this is a test" )
+	db.root.set( "this is a large key value" -> "this is a long string" )
 	db.io.dump
 	println( db.root.get )
 	
