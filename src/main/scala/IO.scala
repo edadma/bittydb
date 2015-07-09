@@ -500,7 +500,9 @@ abstract class IO extends IOConstants
 				printByte( getByte )
 			}
 			
-			print( " "*((width - (pos - mark).asInstanceOf[Int])*3 + 1) )
+			val bytes = (pos - mark).asInstanceOf[Int]
+			
+			print( " "*((width - bytes)*3 + 1 + (if (bytes < 9) 1 else 0)) )
 			
 			pos = mark
 			
