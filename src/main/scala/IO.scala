@@ -347,8 +347,10 @@ abstract class IO extends IOConstants
 				putByte( NIL )
 				pad( 8 )
 			case a: collection.Seq[_] =>
-				putByte( ELEMENTS )
-				sys.error( "ARRAY" )
+				val io = allocComposite
+				
+				io.putByte( ELEMENTS )
+				io.putArray( a )
 		}
 	}
 	
@@ -374,7 +376,7 @@ abstract class IO extends IOConstants
 	}
 	
 	def getObject = {
-		var map = new HashMap[Any, Any]
+		var map = Map.empty[Any, Any]
 		
 		def chunk {
 			val cont = getBig
@@ -426,14 +428,26 @@ abstract class IO extends IOConstants
 	
 	def getArray = {
 		val buf = new ListBuffer[Any]
-		val len = getBig
-		val start = pos
+		
+		def chunk {
+			val cont = getBig
+			val len = getBig
+			val start = pos
 
-		while (pos - start < len) {
-			if (getByte == USED)
-				buf += getValue
+			while (pos - start < len) {
+				if (getByte == USED)
+					buf += getValue
+				else
+					skipValue
+			}
+			
+			if (cont > 0) {
+				pos = cont
+				chunk
+			}
 		}
 
+		chunk
 		buf.toList
 	}
 	
@@ -446,7 +460,7 @@ abstract class IO extends IOConstants
 		
 		for (e <- s) {
 			putByte( USED )
-			putValue( s )
+			putValue( e )
 		}
 	
 		putBig( start, pos - start - BWIDTH )
