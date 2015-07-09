@@ -1,6 +1,7 @@
 package ca.hyperreal.bittydb
 
 import java.nio.charset.Charset
+import java.sql.Timestamp
 
 import collection.mutable.{ListBuffer, HashMap}
 
@@ -57,13 +58,16 @@ abstract class IO extends IOConstants
 	}
 	
 	def finish {
+		if (!allocs.isEmpty)
+		{
 		val len = allocSize
 		
-		// allocate space
-		append
-		writeAllocs( this )
-		allocs.clear
-		primitive = null
+			// allocate space
+			append
+			writeAllocs( this )
+			allocs.clear
+			primitive = null
+		}
 	}
 
 	def allocSize = allocs map (_.totalSize) sum
@@ -275,6 +279,10 @@ abstract class IO extends IOConstants
 		getType
 	}
 	
+	def getTimestamp = new Timestamp( getLong )
+	
+	def putTimestamp( t: Timestamp ) = putLong( t.getTime )
+	
 	def getValue: Any = {
 		val cur = pos
 		val res =
@@ -284,6 +292,7 @@ abstract class IO extends IOConstants
 				case TRUE => true
 				case INT => getInt
 				case LONG => getLong
+				case TIMESTAMP => getTimestamp
 				case DOUBLE => getDouble
 				case sstr if (sstr&0xF0) == SSTRING =>
 					new String( getBytes(sstr&0x0F) )
@@ -316,6 +325,9 @@ abstract class IO extends IOConstants
 			case a: Long =>
 				putByte( LONG )
 				putLong( a )
+			case a: Timestamp =>
+				putByte( TIMESTAMP )
+				putTimestamp( a )
 			case a: Double =>
 				putByte( DOUBLE )
 				putDouble( a )
@@ -477,7 +489,7 @@ abstract class IO extends IOConstants
 		def printChar( c: Int ) = print( if (' ' <= c && c <= '~') c.asInstanceOf[Char] else '.' )
 		
 		for (line <- 0L until size by width) {
-			printf( s"%010x  ", line )
+			printf( s"%10x  ", line )
 			
 			val mark = pos
 			

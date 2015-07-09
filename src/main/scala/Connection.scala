@@ -148,7 +148,7 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 				case ARRAY => sys.error( "not yet" )
 			}
 			
-		def set( kv: (Any, Any) ) {
+		def set( kv: (Any, Any) ) = {
 			io.getType( addr ) match {
 				case EMPTY => io.putValue( addr, Map(kv) )
 				case MEMBERS =>
@@ -167,14 +167,24 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 								io.append
 								io.putObject( Map(kv) )
 							}
+							
+							io.finish
+							false
 						case Left( Some(insertion) ) =>
 							io.putPair( insertion, kv )
-						case Right( at ) => io.putValue( kv._2 )
-					}
-					
-					io.finish
+							io.finish
+							false
+						case Right( at ) =>
+							io.putValue( kv._2 )
+							io.finish
+							true
+					}					
 				case _ => sys.error( "can only use 'set' for an object" )
 			}
+		}
+		
+		def append( v: Any ) {
+			
 		}
 		
 		override def toString =

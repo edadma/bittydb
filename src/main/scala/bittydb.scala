@@ -1,6 +1,7 @@
 package ca.hyperreal
 
 //import org.slf4j.LoggerFactory
+import java.sql.Timestamp
 
 
 package object bittydb {
@@ -14,4 +15,6 @@ package object bittydb {
 		if (logging)
 			println( "[log]  " + o.toString )
 	}
+	
+	def timestamp = new Timestamp(System.currentTimeMillis)
 }
