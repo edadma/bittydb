@@ -21,7 +21,7 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 	private [bittydb] var version: String = _
 	private [bittydb] var freeListPtr: Long = _
 	private [bittydb] var freeList: Long = _
-	private [bittydb] var root: Pointer = _
+	private [bittydb] var _root: Long = _
 	
 	if (io.size == 0) {
 		version = VERSION
@@ -31,7 +31,7 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 		freeListPtr = io.pos
 		freeList = 0
 		io putBig freeList
-		root = new Pointer( io.pos )
+		_root = io.pos
 		io putByte MEMBERS
 		io putObject Map.empty
 		io.force
@@ -51,13 +51,17 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 						io.charset = Charset.forName( cs )
 						freeListPtr = io.pos
 						freeList = io.getBig
-						root = new Pointer( io.pos )
+						_root = io.pos
 					case _ => invalid
 				}
 			case _ => invalid
 		}
 	
-	def invalid = sys.error( "invalid database" )
+	private def invalid = sys.error( "invalid database" )
+	
+	def root = new Pointer( _root )
+	
+	def close = io.close
 	
 	override def toString = "connection to " + io
 	
