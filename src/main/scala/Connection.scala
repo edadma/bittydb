@@ -123,9 +123,15 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 		def find( key: Any ): Option[Pointer] =
 			io.getType( addr ) match {
 				case EMPTY => None
-				case MEMBERS => None
+				case MEMBERS =>
+					lookup( key ) match {
+						case Left( _ ) => None
+						case Right( at ) => Some( new Pointer(at + 1 + VWIDTH) )
+					}
 				case _ => sys.error( "can only use 'find' for an object" )
 			}
+		
+		def key( k: Any ) = find( k ).get
 		
 		private [bittydb] def atEnd =
 			io.getType( addr ) match {
