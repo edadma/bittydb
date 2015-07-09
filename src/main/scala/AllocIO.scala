@@ -1,11 +1,15 @@
 package ca.hyperreal.bittydb
 
+import java.nio.charset.Charset
+
 import collection.mutable.ListBuffer
 
 
-class AllocIO extends MemIO {
+class AllocIO( cs: Charset ) extends MemIO {
 	private [bittydb] val backpatches = new ListBuffer[(IO, Long, Long)]
-		
+	
+	charset = cs
+	
 	def backpatch( io: IO, src: Long ) =
 		backpatches += ((io, src, pos))
 

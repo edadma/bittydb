@@ -15,7 +15,7 @@ abstract class IO extends IOConstants
 		putByte( POINTER )
 		
 		if (primitive eq null) {
-			primitive = new AllocIO
+			primitive = new AllocIO( charset )
 			allocs += primitive
 		}
 		else
@@ -29,7 +29,7 @@ abstract class IO extends IOConstants
 	def allocComposite = {
 		putByte( POINTER )
 		
-		val res = new AllocIO
+		val res = new AllocIO( charset )
 		
 		allocs += res
 		res.backpatch( this, pos )

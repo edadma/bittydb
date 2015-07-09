@@ -9,5 +9,5 @@ object Main extends App
 	db.root.set( "b" -> Map("c" -> 3, "d" -> 4) )
 	db.io.dump
 	println( db.root.get )
-	println( db.root.key("a").get )
+	println( db.root.key("b").get )
 }
