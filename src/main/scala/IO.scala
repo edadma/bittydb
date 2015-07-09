@@ -9,67 +9,11 @@ import collection.mutable.{ListBuffer, HashMap}
 abstract class IO extends IOConstants
 {
 	private [bittydb] var charset: Charset = null
-	private [bittydb] val allocs = new ListBuffer[AllocIO]
-	private [bittydb] var primitive: AllocIO = null
-	
-	def allocPrimitive = {
-		putByte( POINTER )
-		
-		if (primitive eq null) {
-			primitive = new AllocIO( charset )
-			allocs += primitive
-		}
-		else
-			primitive
-		
-		primitive.backpatch( this, pos )
-		padValue
-		primitive
-	}
-	
-	def allocComposite = {
-		putByte( POINTER )
-		
-		val res = new AllocIO( charset )
-		
-		allocs += res
-		res.backpatch( this, pos )
-		padValue
-		res
-	}
-	
-	def writeAllocs( dest: IO ) {
-		var offset = 0L
-		val cur = pos
-		
-		for (a <- allocs) {
-			a.writeBackpatches( pos + offset )
-			offset += a.size
-		}
-		
-		pos = cur
-		
-		if (dest ne this)
-			dest.writeBuffer( this.asInstanceOf[MemIO] )
-			
-		for (a <- allocs) {
-			a.writeAllocs( dest )
-		}
-	}
-	
-	def finish {
-		if (!allocs.isEmpty)
-		{
-		val len = allocSize
-		
-			// allocate space
-			append
-			writeAllocs( this )
-			allocs.clear
-			primitive = null
-		}
-	}
 
+	//
+	// abstract methods
+	//
+	
 	def allocSize = allocs map (_.totalSize) sum
 	
 	def close
@@ -121,8 +65,10 @@ abstract class IO extends IOConstants
 	def writeByteChars( s: String )
 	
 	def writeBuffer( buf: MemIO )
-	
-//// end of abstract methods
+
+	//
+	// i/o methods based on abstract methods
+	//
 	
 	def getBig: Long = (getByte.asInstanceOf[Long]&0xFF)<<32 | getInt.asInstanceOf[Long]&0xFFFFFFFFL
 	
@@ -163,37 +109,6 @@ abstract class IO extends IOConstants
 		pos = addr
 		putByte( b )
 	}
-	
-	def remaining: Long = size - pos
-
-	def skip( len: Long ) = pos += len
-	
-	def skipByte = pos += 1
-	
-	def skipByte( addr: Long ) {
-		pos = addr
-		skipByte
-	}
-	
-	def skipBig = skip( BWIDTH )
-	
-	def skipInt = skip( 4 )
-	
-	def skipLong = skip( 8 )
-	
-	def skipDouble = skip( 8 )
-	
-	def skipString = skip( getLen )
-	
-	def skipValue = skip( 9 )
-	
-	def pad( n: Long ) =
-		for (_ <- 1L to n)
-			putByte( 0 )
-			
-	def padBig = pad( BWIDTH )
-	
-	def padValue = pad( 8 )
 	
 	def readByteChars( len: Int ) = {
 		val buf = new StringBuilder
@@ -263,15 +178,12 @@ abstract class IO extends IOConstants
 		putBytes( s )
 	}
 	
-	def encode( s: String ) = s.getBytes( charset )
-	
 	def putString( s: String ) {putString( encode(s) )}
 
 	def getType: Int =
 		getUnsignedByte match {
 			case POINTER => getUnsignedByte( getBig )
 			case t => t
-//			case t => sys.error( "unrecognized value type: " + t )
 		}
 
 	def getType( addr: Long ): Int = {
@@ -335,6 +247,8 @@ abstract class IO extends IOConstants
 				val s = encode( a )
 				
 				if (s.length > VWIDTH - 1) {
+					putByte( POINTER )
+		
 					val io = allocPrimitive
 					
 					io.putByte( STRING )
@@ -351,6 +265,8 @@ abstract class IO extends IOConstants
 				putByte( EMPTY )
 				pad( 8 )
 			case a: collection.Map[_, _] =>
+				putByte( POINTER )
+		
 				val io = allocComposite
 				
 				io.putByte( MEMBERS )
@@ -359,23 +275,14 @@ abstract class IO extends IOConstants
 				putByte( NIL )
 				pad( 8 )
 			case a: collection.Seq[_] =>
+				putByte( POINTER )
+		
 				val io = allocComposite
 				
 				io.putByte( ELEMENTS )
 				io.putArray( a )
 		}
 	}
-	
-	def atEnd = pos == size - 1
-	
-// 	def pointer( p: Append ) = {
-// 		putByte( POINTER )
-// 		
-// 		val res = alloc
-// 		
-// 		padBig	//putBig( if (atEnd) pos + BWIDTH else size )
-// 		res
-// 	}
 	
 	def getValue( addr: Long ): Any = {
 		pos = addr
@@ -438,6 +345,11 @@ abstract class IO extends IOConstants
 		putPair( kv )
 	}
 	
+	def putElement( v: Any ) {
+		putByte( USED )
+		putValue( v )
+	}
+	
 	def getArray = {
 		val buf = new ListBuffer[Any]
 		
@@ -477,6 +389,14 @@ abstract class IO extends IOConstants
 	
 		putBig( start, pos - start - BWIDTH )
 	}
+
+	//
+	// utility methods
+	//
+	
+	def remaining: Long = size - pos
+	
+	def atEnd = pos == size - 1
 	
 	def dump {
 		val cur = pos
@@ -513,5 +433,102 @@ abstract class IO extends IOConstants
 		}
 		
 		pos = cur
+	}
+
+	def skip( len: Long ) = pos += len
+	
+	def skipByte = pos += 1
+	
+	def skipByte( addr: Long ) {
+		pos = addr
+		skipByte
+	}
+	
+	def skipType( addr: Long ) {
+		if (getUnsignedByte( addr ) == POINTER)
+			skipByte( getBig )
+	}
+	
+	def skipBig = skip( BWIDTH )
+	
+	def skipInt = skip( 4 )
+	
+	def skipLong = skip( 8 )
+	
+	def skipDouble = skip( 8 )
+	
+	def skipString = skip( getLen )
+	
+	def skipValue = skip( 9 )
+	
+	def pad( n: Long ) =
+		for (_ <- 1L to n)
+			putByte( 0 )
+			
+	def padBig = pad( BWIDTH )
+	
+	def padValue = pad( 8 )
+	
+	def encode( s: String ) = s.getBytes( charset )
+	
+	//
+	// allocation
+	//
+		
+	private [bittydb] val allocs = new ListBuffer[AllocIO]
+	private [bittydb] var primitive: AllocIO = null
+	
+	def allocPrimitive = {
+		if (primitive eq null) {
+			primitive = new AllocIO( charset )
+			allocs += primitive
+		}
+		else
+			primitive
+		
+		primitive.backpatch( this, pos )
+		padValue
+		primitive
+	}
+	
+	def allocComposite = {
+		val res = new AllocIO( charset )
+		
+		allocs += res
+		res.backpatch( this, pos )
+		padValue
+		res
+	}
+	
+	def writeAllocs( dest: IO ) {
+		var offset = 0L
+		val cur = pos
+		
+		for (a <- allocs) {
+			a.writeBackpatches( pos + offset )
+			offset += a.size
+		}
+		
+		pos = cur
+		
+		if (dest ne this)
+			dest.writeBuffer( this.asInstanceOf[MemIO] )
+			
+		for (a <- allocs) {
+			a.writeAllocs( dest )
+		}
+	}
+	
+	def finish {
+		if (!allocs.isEmpty)
+		{
+		val len = allocSize
+		
+			// allocate space
+			append
+			writeAllocs( this )
+			allocs.clear
+			primitive = null
+		}
 	}
 }

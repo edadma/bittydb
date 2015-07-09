@@ -139,33 +139,33 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 		
 		private [bittydb] def atEnd =
 			io.getType( addr ) match {
-				case MEMBERS =>
+				case MEMBERS|ELEMENTS =>
 					io.skipBig
 					io.pos + BWIDTH + io.getBig == io.size
 				case STRING => sys.error( "not yet" )
 				case BIGINT => sys.error( "not yet" )
 				case DECIMAL => sys.error( "not yet" )
-				case ARRAY => sys.error( "not yet" )
 			}
 			
-		def set( kv: (Any, Any) ) = {
+		def set( kv: (Any, Any) ) =
 			io.getType( addr ) match {
 				case EMPTY => io.putValue( addr, Map(kv) )
 				case MEMBERS =>
 					lookup( kv._1 ) match {
 						case Left( None ) =>
 							if (atEnd) {
-								io.skipByte( addr )
+								io.skipType( addr )
 								io.skipBig
 								io.addBig( PWIDTH )
 								io.append
 								io.putPair( kv )
 							}
 							else {
-								io.skipByte( addr )
-								io.putBig( io.size )
-								io.append
-								io.putObject( Map(kv) )
+								io.skipType( addr )
+								
+								val cont = io.allocComposite
+								
+								cont.putObject( Map(kv) )
 							}
 							
 							io.finish
@@ -178,13 +178,32 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 							io.putValue( kv._2 )
 							io.finish
 							true
-					}					
+					}
 				case _ => sys.error( "can only use 'set' for an object" )
 			}
-		}
 		
 		def append( v: Any ) {
-			
+			io.getType( addr ) match {
+				case NIL => io.putValue( addr, List(v) )
+				case ELEMENTS =>
+					if (atEnd) {
+						io.skipType( addr )
+						io.skipBig
+						io.addBig( VWIDTH )
+						io.append
+						io.putElement( v )
+					}
+					else {
+						io.skipType( addr )
+						
+						val cont = io.allocComposite
+						
+						cont.putArray( List(v) )
+					}
+					
+					io.finish
+				case _ => sys.error( "can only use 'set' for an object" )
+			}
 		}
 		
 		override def toString =
