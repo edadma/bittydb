@@ -2,6 +2,7 @@ package ca.hyperreal.bittydb
 
 import java.nio.charset.Charset
 import java.sql.Timestamp
+import java.util.UUID
 
 import collection.mutable.{ListBuffer, HashMap}
 
@@ -195,6 +196,13 @@ abstract class IO extends IOConstants
 	
 	def putTimestamp( t: Timestamp ) = putLong( t.getTime )
 	
+	def getUUID = new UUID( getLong, getLong )
+	
+	def putUUID( id: UUID ) {
+		putLong( id.getMostSignificantBits )
+		putLong( id.getLeastSignificantBits )
+	}
+	
 	def getValue: Any = {
 		val cur = pos
 		val res =
@@ -205,6 +213,7 @@ abstract class IO extends IOConstants
 				case INT => getInt
 				case LONG => getLong
 				case TIMESTAMP => getTimestamp
+				case UUID => getUUID
 				case DOUBLE => getDouble
 				case sstr if (sstr&0xF0) == SSTRING =>
 					new String( getBytes(sstr&0x0F) )
@@ -240,6 +249,9 @@ abstract class IO extends IOConstants
 			case a: Timestamp =>
 				putByte( TIMESTAMP )
 				putTimestamp( a )
+			case a: UUID =>
+				putByte( UUID )
+				putUUID( a )
 			case a: Double =>
 				putByte( DOUBLE )
 				putDouble( a )
