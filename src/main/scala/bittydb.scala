@@ -16,5 +16,5 @@ package object bittydb {
 			println( "[log]  " + o.toString )
 	}
 	
-	def timestamp = new Timestamp(System.currentTimeMillis)
+	def timestamp = new Timestamp( System.currentTimeMillis )
 }

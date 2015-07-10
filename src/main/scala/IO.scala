@@ -288,10 +288,10 @@ abstract class IO extends IOConstants
 				
 				io.putByte( MEMBERS )
 				io.putObject( a )
-			case a: collection.Seq[_] if a isEmpty =>
+			case a: collection.TraversableOnce[_] if a isEmpty =>
 				putByte( NIL )
 				pad( 8 )
-			case a: collection.Seq[_] =>
+			case a: collection.TraversableOnce[_] =>
 				putByte( POINTER )
 		
 				val io = allocComposite
@@ -340,7 +340,7 @@ abstract class IO extends IOConstants
 	}
 	
 	def putObject( m: collection.Map[_, _] ) {
-		putBig( pos + BWIDTH)	// last chunk pointer
+		putBig( pos + BWIDTH )	// last chunk pointer
 		putObjectChunk( m )
 	}
 	
@@ -400,7 +400,8 @@ abstract class IO extends IOConstants
 	}
 	
 	def putArray( s: collection.TraversableOnce[Any] ) {
-		padBig
+		println( pos )
+		putBig( pos + BWIDTH )	// last chunk pointer
 		putArrayChunk( s )
 	}
 	
@@ -462,7 +463,6 @@ abstract class IO extends IOConstants
 		}
 		
 		pos = cur
-		println
 	}
 
 	def skip( len: Long ) = pos += len

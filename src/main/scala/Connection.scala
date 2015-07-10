@@ -171,6 +171,8 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 			io.getType( addr ) match {
 				case EMPTY => io.putValue( addr, Map(kv) )
 				case MEMBERS =>
+					val first = io.pos
+					
 					lookup( kv._1 ) match {
 						case Left( None ) =>
 							if (ending) {
@@ -182,8 +184,7 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 							else {
 								val cont = io.allocComposite
 								
-								io.skipType( addr )
-								cont.backpatch( io, io.pos )
+								cont.backpatch( io, first )
 								cont.putObjectChunk( Map(kv) )
 							}
 							
@@ -194,7 +195,6 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 							io.finish
 							false
 						case Right( at ) =>
-						println(123)
 							io.putValue( kv._2 )
 							io.finish
 							true
@@ -208,13 +208,14 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 			io.getType( addr ) match {
 				case NIL => io.putValue( addr, s )
 				case ELEMENTS =>
+					val first = io.pos
+					
 					if (ending) {
-						io.skipType( addr )
+						println(123)
 						io.skipBig
 						
 						val sizeptr = io.pos
 						
-						io.padBig
 						io.append
 						
 						var count = 0
@@ -227,16 +228,16 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 						io.addBig( sizeptr, count*VWIDTH )
 					}
 					else {
-						io.skipType( addr )
-						
+						println(123)
 						val cont = io.allocComposite
 						
-						cont.putArray( s )
+						cont.backpatch( io, first )
+						cont.putArrayChunk( s )
 					}
-					
-					io.finish
 				case _ => sys.error( "can only use 'append' for an array" )
 			}
+					
+			io.finish
 		}
 		
 		def prepend( elems: Any* ) = prependSeq( elems )
