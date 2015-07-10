@@ -6,9 +6,9 @@ object Main extends App
 	val db = Connection.mem()
 	
 //	db.root.set( "a", List("abc") )
-// 	db.root.set( "a", "asdfasdfasdf" )
-// 	db.io.dump
-// 	println( db.root.get )
+	db.root.set( "a", "asdfasdfasdf" )
+	db.io.dump
+	println( db.root.get )
 	
 //	db.root.put( Map("a" -> List(1, 2, 3)) )
 	db.root.set( "b" -> 1234 )

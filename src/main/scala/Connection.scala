@@ -149,7 +149,7 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 		def key( k: Any ) = find( k ).get
 		
 		// still suspect
-		private [bittydb] def atEnd =
+		private [bittydb] def ending =
 			io.getType( addr ) match {
 				case MEMBERS|ELEMENTS =>
 					io.getBig match {
@@ -170,7 +170,7 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 				case MEMBERS =>
 					lookup( kv._1 ) match {
 						case Left( None ) =>
-							if (atEnd) {
+							if (ending) {
 								io.skipType( addr )
 								io.skipBig
 								io.skipBig
@@ -180,10 +180,11 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 							}
 							else {
 								io.skipType( addr )
+								io.skipBig
 								
 								val cont = io.allocComposite
 								
-								cont.putObject( Map(kv) )
+								cont.putObjectChunk( Map(kv) )
 							}
 							
 							io.finish
@@ -206,7 +207,7 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 			io.getType( addr ) match {
 				case NIL => io.putValue( addr, s )
 				case ELEMENTS =>
-					if (atEnd) {
+					if (ending) {
 						io.skipType( addr )
 						io.skipBig
 						
