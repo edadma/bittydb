@@ -194,6 +194,7 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 							io.finish
 							false
 						case Right( at ) =>
+						println(123)
 							io.putValue( kv._2 )
 							io.finish
 							true
