@@ -340,7 +340,7 @@ abstract class IO extends IOConstants
 	}
 	
 	def putObject( m: collection.Map[_, _] ) {
-		padBig	// last chunk pointer
+		putBig( pos + BWIDTH)	// last chunk pointer
 		putObjectChunk( m )
 	}
 	

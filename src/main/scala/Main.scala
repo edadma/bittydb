@@ -15,10 +15,14 @@ object Main extends App
 	db.io.dump
 	println( db.root.get )
 	
-// 	db.root.set( "c", 5678 )
+// 	db.root.remove( "b" )
 // 	db.io.dump
 // 	println( db.root.get )
-// 	
+
+	db.root.set( "c", 0x5678 )
+	db.io.dump
+	println( db.root.get )
+	
 // 	db.root.key( "a" ).append( "def" )
 // 	db.io.dump
 // 	println( db.root.get )
