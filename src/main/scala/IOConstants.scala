@@ -33,6 +33,7 @@ trait IOConstants {
 	val BWIDTH = 5				// big (i.e. pointers, sizes) width
 	val VWIDTH = 1 + 8			// value width
 	val PWIDTH = 1 + 2*VWIDTH 	// pair width
+	val EWIDTH = 1 + VWIDTH
 	
 	val USED = 0
 	val UNUSED = 1

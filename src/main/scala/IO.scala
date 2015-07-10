@@ -340,7 +340,7 @@ abstract class IO extends IOConstants
 	}
 	
 	def putObject( m: collection.Map[_, _] ) {
-		putBig( pos + BWIDTH )	// last chunk pointer
+		padBig//putBig( pos + BWIDTH )	// last chunk pointer
 		putObjectChunk( m )
 	}
 	
@@ -400,8 +400,7 @@ abstract class IO extends IOConstants
 	}
 	
 	def putArray( s: collection.TraversableOnce[Any] ) {
-		println( pos )
-		putBig( pos + BWIDTH )	// last chunk pointer
+		padBig//putBig( pos + BWIDTH )	// last chunk pointer
 		putArrayChunk( s )
 	}
 	

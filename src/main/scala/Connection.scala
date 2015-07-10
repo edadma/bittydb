@@ -211,7 +211,6 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 					val first = io.pos
 					
 					if (ending) {
-						println(123)
 						io.skipBig
 						
 						val sizeptr = io.pos
@@ -225,7 +224,7 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 							count += 1
 						}
 						
-						io.addBig( sizeptr, count*VWIDTH )
+						io.addBig( sizeptr, count*EWIDTH )
 					}
 					else {
 						println(123)
