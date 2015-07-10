@@ -10,8 +10,8 @@ object Main extends App
 // 	db.io.dump
 // 	println( db.root.get )
 	
-	db.root.put( Map("a" -> 0x12345678) )
-//	db.root.set( "b" -> 1234 )
+//	db.root.put( Map("a" -> List(1, 2, 3)) )
+	db.root.set( "b" -> 1234 )
 	db.io.dump
 	println( db.root.get )
 	

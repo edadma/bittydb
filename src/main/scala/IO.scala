@@ -394,11 +394,17 @@ abstract class IO extends IOConstants
 			}
 		}
 
+		skipBig
 		chunk
 		buf.toList
 	}
 	
 	def putArray( s: collection.TraversableOnce[Any] ) {
+		padBig
+		putArrayChunk( s )
+	}
+	
+	def putArrayChunk( s: collection.TraversableOnce[Any] ) {
 		padBig	// continuation pointer
 		
 		val start = pos
@@ -495,6 +501,14 @@ abstract class IO extends IOConstants
 	
 	def encode( s: String ) = s.getBytes( charset )
 	
+	def inert( action: => Unit ) {
+		val cur = pos
+		
+		action
+		
+		pos = cur
+	}
+	
 	//
 	// allocation
 	//
@@ -526,14 +540,13 @@ abstract class IO extends IOConstants
 	
 	def writeAllocs( dest: IO ) {
 		var offset = 0L
-		val cur = pos
 		
-		for (a <- allocs) {
-			a.writeBackpatches( pos + offset )
-			offset += a.size
+		inert {
+			for (a <- allocs) {
+				a.writeBackpatches( pos + offset )
+				offset += a.size
+			}
 		}
-		
-		pos = cur
 		
 		if (dest ne this)
 			dest.writeBuffer( this.asInstanceOf[MemIO] )

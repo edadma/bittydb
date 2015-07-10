@@ -15,7 +15,10 @@ class MemIO extends IO
 	
 	def pos: Long = db.buffer.position
 	
-	def pos_=( p: Long ) = db.buffer.position( p.asInstanceOf[Int] )
+	def pos_=( p: Long ) {
+		assert( p <= size, "file pointer must be less than or equal to file size" )
+		db.buffer.position( p.asInstanceOf[Int] )
+	}
 	
 	def append: Long = {
 		pos = size
