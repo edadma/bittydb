@@ -227,7 +227,6 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 						io.addBig( sizeptr, count*EWIDTH )
 					}
 					else {
-						println(123)
 						val cont = io.allocComposite
 						
 						cont.backpatch( io, first )
