@@ -537,12 +537,12 @@ abstract class IO extends IOConstants
 		res
 	}
 	
-	def writeAllocs( dest: IO ) {
-		var offset = 0L
+	def writeAllocs( dest: IO, base: Long ) {
+		var offset = base
 		
 		inert {
 			for (a <- allocs) {
-				a.writeBackpatches( pos + offset )
+				a.writeBackpatches( offset )
 				offset += a.size
 			}
 		}
@@ -551,7 +551,8 @@ abstract class IO extends IOConstants
 			dest.writeBuffer( this.asInstanceOf[MemIO] )
 			
 		for (a <- allocs) {
-			a.writeAllocs( dest )
+			a.writeAllocs( dest, offset )
+			offset += a.size
 		}
 	}
 	
@@ -562,7 +563,7 @@ abstract class IO extends IOConstants
 		
 			// allocate space
 			append
-			writeAllocs( this )
+			writeAllocs( this, pos )
 			allocs.clear
 			primitive = null
 		}

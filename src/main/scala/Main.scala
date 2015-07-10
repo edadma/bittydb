@@ -19,15 +19,11 @@ object Main extends App
 // 		db.io.dump
 // 		println( db.root.get )
 		
-		db.root.set( "a" -> 1 )
-		db.io.dump
-		println( db.root.get )
-		
 		db.root.set( "b" -> "asdfasdfasdf" )
 		db.io.dump
 		println( db.root.get )
 		
-		db.root.set( "c" -> "qwerqwerqwer" )
+		db.root.set( "c" -> Map("d" -> "qwerqwerqwer", "e" -> "zxcvzxcvzxcv") )
 		db.io.dump
 		println( db.root.get )
 }
