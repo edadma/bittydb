@@ -75,4 +75,20 @@ class Tests extends FreeSpec with PropertyChecks with Matchers
 		db.root.key( "a" ).prepend( 2 )
 		db.root.get shouldBe Map( "a" -> List(2, 1) )
 	}
+	
+	"iterator" in
+	{
+	val db = Connection.mem()
+	
+		db.root.set( "a", Nil )
+		db.root.key( "a" ).iterator.isEmpty shouldBe true
+		
+		db.root.key( "a" ).prepend( 1, 2 )
+		db.root.key( "a" ).prepend( 3, 4 )
+		db.root.key( "a" ).append( 5 )
+		db.root.key( "a" ).prepend( 6 )
+		
+		db.root.key( "a" ).iterator.drop(3).next.put( "happy" )
+		(db.root.key( "a" ).iterator map (_.get) toList) shouldBe List( 6, 3, 4, "happy", 2, 5 )
+	}
 }
