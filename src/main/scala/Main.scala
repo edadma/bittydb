@@ -11,5 +11,9 @@ object Main extends App
 	db.root.key( "a" ).prepend( 3, 4 )
 	db.root.key( "a" ).append( 5 )
 	db.root.key( "a" ).prepend( 6 )
+	
+	val it = db.root.key( "a" ).iterator
+	
+	it.drop(3).next.put( "happy" )
 	println( db.root.key( "a" ).iterator map (_.get) toList )
 }

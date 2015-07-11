@@ -65,6 +65,16 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 	
 	override def toString = "connection to " + io
 	
+	class Cursor( elem: Long ) extends Pointer( elem + 1 ) {
+		def remove = io.putByte( elem, UNUSED )
+		
+		override def get =
+			if (io.getByte( elem ) == UNUSED)
+				sys.error( "element has been removed" )
+			else
+				super.get
+	}
+	
 	class Pointer( addr: Long ) {
 		def get = io.getValue( addr )
 		
@@ -285,7 +295,7 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 						case p => p
 					}
 					
-					new collection.AbstractIterator[Pointer] {
+					new collection.AbstractIterator[Cursor] {
 						var cont: Long = _
 						var chunksize: Long = _
 						var cur: Long = _
@@ -342,7 +352,7 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 						def next =
 							if (hasNext) {
 								scan = true
-								new Pointer( cur + 1 )
+								new Cursor( cur )
 							} else
 								throw new java.util.NoSuchElementException( "next on empty iterator" )
 					}
