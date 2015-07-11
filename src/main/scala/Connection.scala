@@ -5,6 +5,7 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
 
 import util.Either
+import collection.{TraversableOnce, AbstractIterator, Map => CMap}
 
 
 object Connection
@@ -61,6 +62,8 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 	
 	val root = new Pointer( _root )
 	
+	def collection( name: String ) = new Collection( root, name )
+	
 	def close = io.close
 	
 	override def toString = "connection to " + io
@@ -76,13 +79,15 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 	}
 	
 	class Pointer( addr: Long ) {
+		def collection( name: String ) = new Collection( this, name )
+		
 		def getAs[A] = get.asInstanceOf[A]
 		
 		def get = io.getValue( addr )
 		
 		def put( v: Any ) {
 			v match {
-				case m: collection.Map[_, _] if addr == _root =>
+				case m: CMap[_, _] if addr == _root =>
 					io.size = _root + 1
 					io.pos = io.size
 					io.putObject( m )
@@ -147,19 +152,19 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 				case _ => sys.error( "can only use 'remove' for an object" )
 			}
 		
-		def find( key: Any ): Option[Pointer] =
+		def keyOption( k: Any ): Option[Pointer] =
 			io.getType( addr ) match {
 				case EMPTY => None
 				case MEMBERS =>
-					lookup( key ) match {
+					lookup( k ) match {
 						case Left( _ ) => None
 						case Right( at ) => Some( new Pointer(at + 1 + VWIDTH) )
 					}
-				case _ => sys.error( "can only use 'find/key' for an object" )
+				case _ => sys.error( "can only use 'keyOption/key' for an object" )
 			}
 		
 		def key( k: Any ) =
-			find( k ) match {
+			keyOption( k ) match {
 				case None => sys.error( "no such key: " + k )
 				case Some( p ) => p
 			}
@@ -222,7 +227,7 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 		
 		def append( elems: Any* ) = appendSeq( elems )
 		
-		def appendSeq( s: collection.TraversableOnce[Any] ) {
+		def appendSeq( s: TraversableOnce[Any] ) {
 			io.getType( addr ) match {
 				case NIL => io.putValue( addr, s )
 				case ELEMENTS =>
@@ -262,7 +267,7 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 		
 		def prepend( elems: Any* ) = prependSeq( elems )
 		
-		def prependSeq( s: collection.TraversableOnce[Any] ) {
+		def prependSeq( s: TraversableOnce[Any] ) {
 			io.getType( addr ) match {
 				case NIL => io.putValue( addr, s )
 				case ELEMENTS =>
@@ -287,9 +292,11 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 			io.finish
 		}
 		
-		def valuesAs[A] = values.asInstanceOf[Iterator[A]]
+		def membersAs[A] = members.asInstanceOf[Iterator[A]]
 		
-		def values = iterator map (_.get)
+		def members = iterator map (_.get)
+		
+		def at( index: Int ) = iterator drop (index) next
 		
 		def iterator = {
 			io.getType( addr ) match {
@@ -301,7 +308,7 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 						case p => p
 					}
 					
-					new collection.AbstractIterator[Cursor] {
+					new AbstractIterator[Cursor] {
 						var cont: Long = _
 						var chunksize: Long = _
 						var cur: Long = _
@@ -366,11 +373,15 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 			}
 		}
 		
+		def kind = io.getType( addr )
+		
 		override def toString =
-			io.getType( addr ) match {
+			kind match {
 				case NULL => "null"
 				case FALSE => "false"
 				case TRUE => "true"
+				case BYTE => "byte"
+				case SHORT => "short integer"
 				case INT => "integer"
 				case LONG => "long integer"
 				case DOUBLE => "double"

@@ -89,6 +89,6 @@ class Tests extends FreeSpec with PropertyChecks with Matchers
 		db.root.key( "a" ).prepend( 6 )
 		
 		db.root.key( "a" ).iterator.drop(3).next.put( "happy" )
-		db.root.key( "a" ).values.toList shouldBe List( 6, 3, 4, "happy", 2, 5 )
+		db.root.key( "a" ).members.toList shouldBe List( 6, 3, 4, "happy", 2, 5 )
 	}
 }

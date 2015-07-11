@@ -5,15 +5,11 @@ object Main extends App
 {
 	val db = Connection.mem()
 	
-	db.root.set( "a", List() )
-	db.io.dump
-	db.root.key( "a" ).prepend( 1, 2 )
-	db.root.key( "a" ).prepend( 3, 4 )
-	db.root.key( "a" ).append( 5 )
-	db.root.key( "a" ).prepend( 6 )
+	db.root.set( "test", List(1, Map("a" -> 1, "b" -> "first"), Map("a" -> 2, "b" -> "second"), Map("a" -> 3, "b" -> "third")) )
+	println( db.root.key("test").get )
 	
-	val it = db.root.key( "a" ).iterator
+	db.collection( "test" ).insert( Map("a" -> 4, "b" -> "fourth") )
+	println( db.root.key("test").get )
 	
-	it.drop(3).next.put( 7 )
-	println( db.root.key( "a" ).valuesAs[Int].filter( _ < 4 ) toList )
+	println( db.collection( "test" ) find (Map("a" -> 2)) toList )
 }
