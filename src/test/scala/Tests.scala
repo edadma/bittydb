@@ -64,4 +64,15 @@ class Tests extends FreeSpec with PropertyChecks with Matchers
 		db.root.key( "a" ).append( 3 )
 		db.root.get shouldBe Map( "a" -> List(1, "asdfasdfasdf", "qwerqwerqwer", 3) )
 	}
+	
+	"prepend" in
+	{
+	val db = Connection.mem()
+	
+		db.root.set( "a", Nil )
+		db.root.key( "a" ).prepend( 1 )
+		db.root.get shouldBe Map( "a" -> List(1) )
+		db.root.key( "a" ).prepend( 2 )
+		db.root.get shouldBe Map( "a" -> List(2, 1) )
+	}
 }

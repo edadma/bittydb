@@ -394,18 +394,23 @@ abstract class IO extends IOConstants
 			}
 		}
 
-		skipBig
+		getBig match {
+			case NUL => skipBig
+			case f => pos = f
+		}
+		
 		chunk
 		buf.toList
 	}
 	
 	def putArray( s: collection.TraversableOnce[Any] ) {
-		padBig//putBig( pos + BWIDTH )	// last chunk pointer
+		padBig	// first chunk pointer
+		padBig	// last chunk pointer
 		putArrayChunk( s )
 	}
 	
-	def putArrayChunk( s: collection.TraversableOnce[Any] ) {
-		padBig	// continuation pointer
+	def putArrayChunk( s: collection.TraversableOnce[Any], contptr: Long = NUL ) {
+		putBig( contptr )	// continuation pointer
 		
 		val start = pos
 	

@@ -143,19 +143,26 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 						case Left( _ ) => None
 						case Right( at ) => Some( new Pointer(at + 1 + VWIDTH) )
 					}
-				case _ => sys.error( "can only use 'find' for an object" )
+				case _ => sys.error( "can only use 'find/key' for an object" )
 			}
 		
-		def key( k: Any ) = find( k ).get
+		def key( k: Any ) =
+			find( k ) match {
+				case None => sys.error( "no such key: " + k )
+				case Some( p ) => p
+			}
 		
 		private [bittydb] def ending =
 			io.getType( addr ) match {
-				case MEMBERS|ELEMENTS =>
+				case t@(MEMBERS|ELEMENTS) =>
+					if (t == ELEMENTS)
+						io.skipBig
+					
 					io.getBig match {
 						case NUL =>
 						case addr => io.pos = addr
 					}
-					
+						
 					io.skipBig
 					
 					val res = io.pos + BWIDTH + io.getBig == io.size
@@ -208,7 +215,7 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 			io.getType( addr ) match {
 				case NIL => io.putValue( addr, s )
 				case ELEMENTS =>
-					val first = io.pos
+					val header = io.pos
 					
 					if (ending) {
 						io.skipBig
@@ -227,9 +234,14 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 						io.addBig( sizeptr, count*EWIDTH )
 					}
 					else {
+						io.inert {
+							if (io.getBig( header ) == NUL)
+								io.putBig( header, header + 2*BWIDTH )
+						}
+						
 						val cont = io.allocComposite
 						
-						cont.backpatch( io, first )
+						cont.backpatch( io, header + BWIDTH )
 						cont.putArrayChunk( s )
 					}
 				case _ => sys.error( "can only use 'append' for an array" )
@@ -240,19 +252,29 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 		
 		def prepend( elems: Any* ) = prependSeq( elems )
 		
-		def prependSeq( s: collection.TraversableOnce[Any] ) {		
+		def prependSeq( s: collection.TraversableOnce[Any] ) {
 			io.getType( addr ) match {
 				case NIL => io.putValue( addr, s )
 				case ELEMENTS =>
-						io.skipType( addr )
-						
-						val cont = io.allocComposite
-						
-						cont.putArray( s )
+					val header = io.pos
 					
-					io.finish
+					val first = io.getBig match {
+						case NUL => header + 2*BWIDTH
+						case p => p
+					}
+					
+					if (io.getBig == NUL)
+						io.putBig( io.pos - BWIDTH, header + 2*BWIDTH )
+						
+					io.pos = header
+					
+					val cont = io.allocComposite
+					
+					cont.putArrayChunk( s, first )
 				case _ => sys.error( "can only use 'prepend' for an array" )
 			}
+			
+			io.finish
 		}
 		
 		override def toString =
