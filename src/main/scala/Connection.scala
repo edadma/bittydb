@@ -59,13 +59,51 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 	
 	private def invalid = sys.error( "invalid database" )
 	
-	def root = new Pointer( _root )
+	val root = new Pointer( _root )
 	
 	def close = io.close
 	
 	override def toString = "connection to " + io
 	
 	class Pointer( addr: Long ) {
+		def iterator = {
+			io.getType( addr ) match {
+				case NIL => Iterator.empty
+				case ELEMENTS =>
+					val header = io.pos
+					
+					new collection.AbstractIterator[Pointer] {
+						val first = io.getBig match {
+							case NUL => header + 2*BWIDTH
+							case p => p
+						}
+						var cont: Long = _
+						var chunksize: Long = _
+						var cur: Long = _
+						var value: Any = null
+						
+						chunk( first )
+						
+						private def chunk( p: Long ) {
+							cont = io.getBig( p )
+							chunksize = io.getBig
+							cur = first + 2*BWIDTH
+						}
+						
+						def hasNext = {
+							false
+						}
+// 							if (value eq null)
+// 							{
+// 								if (chunksize == 0) {}
+// 							}
+						
+						def next = null
+					}
+				case _ => sys.error( "can only use 'iterator' for an array" )
+			}
+		}
+		
 		def get = io.getValue( addr )
 		
 		def put( v: Any ) {
@@ -246,7 +284,7 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 					}
 				case _ => sys.error( "can only use 'append' for an array" )
 			}
-					
+			
 			io.finish
 		}
 		
