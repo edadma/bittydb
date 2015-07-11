@@ -88,12 +88,17 @@ abstract class IO extends IOConstants
 		putBig( l )
 	}
 	
-	def addBig( len: Int ) {
+	def addBig( a: Int ) {
 		val cur = pos
 		val v = getBig
 		
 		pos = cur
-		putBig( v + len )
+		putBig( v + a )
+	}
+	
+	def addBig( addr: Long, a: Int ) {
+		pos = addr
+		addBig( a )
 	}
 	
 	def getUnsignedByte( addr: Long ): Int = {
@@ -542,5 +547,7 @@ abstract class IO extends IOConstants
 			allocs.clear
 			primitive = null
 		}
+		
+		force
 	}
 }

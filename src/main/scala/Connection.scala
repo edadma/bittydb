@@ -69,7 +69,15 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 		def get = io.getValue( addr )
 		
 		def put( v: Any ) {
-			io.putValue( addr, v )
+			v match {
+				case m: collection.Map[_, _] if addr == _root =>
+					io.size = _root + 1
+					io.putObject( m )
+				case _ if addr == _root => sys.error( "can only 'put' an object at root" )
+				case _ => io.putValue( addr, v )
+			}
+			
+			io.finish
 		}
 		
 		private [bittydb] def lookup( key: Any ): Either[Option[Long], Long] = {
@@ -153,7 +161,7 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 				case MEMBERS =>
 					lookup( kv._1 ) match {
 						case Left( None ) =>
-							if (atEnd) {
+							if (atEnd) {	// this may be wrong for multi-part objects - confirmed
 								io.skipType( addr )
 								io.skipBig
 								io.addBig( PWIDTH )
@@ -182,27 +190,57 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 				case _ => sys.error( "can only use 'set' for an object" )
 			}
 		
-		def append( v: Any ) {
+		def append( elems: Any* ) = appendSeq( elems )
+		
+		def appendSeq( s: collection.TraversableOnce[Any] ) {
 			io.getType( addr ) match {
-				case NIL => io.putValue( addr, List(v) )
+				case NIL => io.putValue( addr, s )
 				case ELEMENTS =>
 					if (atEnd) {
 						io.skipType( addr )
 						io.skipBig
-						io.addBig( VWIDTH )
+						
+						val sizeptr = io.pos
+						
+						io.padBig
 						io.append
-						io.putElement( v )
+						
+						var count = 0
+						
+						for (e <- s) {
+							io.putElement( e )
+							count += 1
+						}
+						
+						io.addBig( sizeptr, count*VWIDTH )
 					}
 					else {
 						io.skipType( addr )
 						
 						val cont = io.allocComposite
 						
-						cont.putArray( List(v) )
+						cont.putArray( s )
 					}
 					
 					io.finish
-				case _ => sys.error( "can only use 'set' for an object" )
+				case _ => sys.error( "can only use 'append' for an array" )
+			}
+		}
+		
+		def prepend( elems: Any* ) = prependSeq( elems )
+		
+		def prependSeq( s: collection.TraversableOnce[Any] ) {		
+			io.getType( addr ) match {
+				case NIL => io.putValue( addr, s )
+				case ELEMENTS =>
+						io.skipType( addr )
+						
+						val cont = io.allocComposite
+						
+						cont.putArray( s )
+					
+					io.finish
+				case _ => sys.error( "can only use 'prepend' for an array" )
 			}
 		}
 		
