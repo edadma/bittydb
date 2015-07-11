@@ -14,6 +14,6 @@ object Main extends App
 	
 	val it = db.root.key( "a" ).iterator
 	
-	it.drop(3).next.put( "happy" )
-	println( db.root.key( "a" ).iterator map (_.get) toList )
+	it.drop(3).next.put( 7 )
+	println( db.root.key( "a" ).valuesAs[Int].filter( _ < 4 ) toList )
 }

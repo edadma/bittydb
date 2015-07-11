@@ -76,6 +76,8 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 	}
 	
 	class Pointer( addr: Long ) {
+		def getAs[A] = get.asInstanceOf[A]
+		
 		def get = io.getValue( addr )
 		
 		def put( v: Any ) {
@@ -284,6 +286,10 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 			
 			io.finish
 		}
+		
+		def valuesAs[A] = values.asInstanceOf[Iterator[A]]
+		
+		def values = iterator map (_.get)
 		
 		def iterator = {
 			io.getType( addr ) match {
