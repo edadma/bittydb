@@ -72,6 +72,7 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 			v match {
 				case m: collection.Map[_, _] if addr == _root =>
 					io.size = _root + 1
+					io.pos = io.size
 					io.putObject( m )
 				case _ if addr == _root => sys.error( "can only 'put' an object at root" )
 				case _ => io.putValue( addr, v )
@@ -113,6 +114,8 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 					None
 			}
 			
+			io.skipBig
+			
 			chunk match {
 				case Some( addr ) => Right( addr )
 				case None => Left( where )
@@ -148,7 +151,11 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 		private [bittydb] def atEnd =
 			io.getType( addr ) match {
 				case MEMBERS|ELEMENTS =>
-					io.skipBig
+					io.getBig match {
+						case NUL =>
+						case addr => io.pos = addr
+					}
+					
 					io.pos + BWIDTH + io.getBig == io.size
 				case STRING => sys.error( "not yet" )
 				case BIGINT => sys.error( "not yet" )
@@ -161,7 +168,7 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 				case MEMBERS =>
 					lookup( kv._1 ) match {
 						case Left( None ) =>
-							if (atEnd) {	// this may be wrong for multi-part objects - confirmed
+							if (atEnd) {
 								io.skipType( addr )
 								io.skipBig
 								io.addBig( PWIDTH )

@@ -16,8 +16,13 @@ class ExpandableByteBuffer
 	def size = _size
 	
 	def size_=( s: Int ) {
+		val cur = _buffer.position
+		
 		sizeHint( s )
 		_size = s
+		
+		if (cur > _size)
+			_buffer.position( _size )
 	}
 	
 	def allocate( capacity: Int ) = {

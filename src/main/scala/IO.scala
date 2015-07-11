@@ -334,11 +334,17 @@ abstract class IO extends IOConstants
 			}
 		}
 
+		skipBig	// skip last chunk pointer
 		chunk
 		map
 	}
 	
 	def putObject( m: collection.Map[_, _] ) {
+		padBig	// last chunk pointer
+		putObjectChunk( m )
+	}
+	
+	def putObjectChunk( m: collection.Map[_, _] ) {
 		padBig	// continuation pointer
 		
 		val start = pos
@@ -450,6 +456,7 @@ abstract class IO extends IOConstants
 		}
 		
 		pos = cur
+		println
 	}
 
 	def skip( len: Long ) = pos += len
