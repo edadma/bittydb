@@ -255,8 +255,12 @@ abstract class IO extends IOConstants
 				putByte( TIMESTAMP )
 				putTimestamp( a )
 			case a: UUID =>
-				putByte( UUID )
-				putUUID( a )
+				putByte( POINTER )
+	
+				val io = allocPrimitive
+					
+				io.putByte( UUID )
+				io.putUUID( a )
 			case a: Double =>
 				putByte( DOUBLE )
 				putDouble( a )
@@ -298,6 +302,7 @@ abstract class IO extends IOConstants
 				
 				io.putByte( ELEMENTS )
 				io.putArray( a )
+			case a => sys.error( "unknown type: " + a )
 		}
 	}
 	

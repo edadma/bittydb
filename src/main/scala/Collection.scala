@@ -1,5 +1,7 @@
 package ca.hyperreal.bittydb
 
+import java.util.UUID._
+
 
 class Collection( parent: Connection#Pointer, name: String ) extends IOConstants {
 	type Document = Map[Any, Any]
@@ -48,7 +50,7 @@ class Collection( parent: Connection#Pointer, name: String ) extends IOConstants
 	def insert( documents: Document* ) {
 		create
 		
-		for (d <- documents)
-			c.append( d )
+		for (d <- documents)			
+			c.append( if (d contains "_id") d else d + ("_id" -> randomUUID) )
 	}
 }
