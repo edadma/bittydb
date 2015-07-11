@@ -66,44 +66,6 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 	override def toString = "connection to " + io
 	
 	class Pointer( addr: Long ) {
-		def iterator = {
-			io.getType( addr ) match {
-				case NIL => Iterator.empty
-				case ELEMENTS =>
-					val header = io.pos
-					
-					new collection.AbstractIterator[Pointer] {
-						val first = io.getBig match {
-							case NUL => header + 2*BWIDTH
-							case p => p
-						}
-						var cont: Long = _
-						var chunksize: Long = _
-						var cur: Long = _
-						var value: Any = null
-						
-						chunk( first )
-						
-						private def chunk( p: Long ) {
-							cont = io.getBig( p )
-							chunksize = io.getBig
-							cur = first + 2*BWIDTH
-						}
-						
-						def hasNext = {
-							false
-						}
-// 							if (value eq null)
-// 							{
-// 								if (chunksize == 0) {}
-// 							}
-						
-						def next = null
-					}
-				case _ => sys.error( "can only use 'iterator' for an array" )
-			}
-		}
-		
 		def get = io.getValue( addr )
 		
 		def put( v: Any ) {
@@ -225,8 +187,7 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 								io.addBig( PWIDTH )
 								io.append
 								io.putPair( kv )
-							}
-							else {
+							} else {
 								val cont = io.allocComposite
 								
 								cont.backpatch( io, first )
@@ -270,8 +231,7 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 						}
 						
 						io.addBig( sizeptr, count*EWIDTH )
-					}
-					else {
+					} else {
 						io.inert {
 							if (io.getBig( header ) == NUL)
 								io.putBig( header, header + 2*BWIDTH )
@@ -313,6 +273,81 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 			}
 			
 			io.finish
+		}
+		
+		def iterator = {
+			io.getType( addr ) match {
+				case NIL => Iterator.empty
+				case ELEMENTS =>
+					val header = io.pos
+					val first = io.getBig match {
+						case NUL => header + 2*BWIDTH
+						case p => p
+					}
+					
+					new collection.AbstractIterator[Pointer] {
+						var cont: Long = _
+						var chunksize: Long = _
+						var cur: Long = _
+						var scan = false
+						var done = false
+						
+						chunk( first )
+						
+						private def chunk( p: Long ) {
+							cont = io.getBig( p )
+							chunksize = io.getBig
+							cur = p + 2*BWIDTH
+						}
+						
+						def hasNext = {
+							def advance = {
+								chunksize -= EWIDTH
+								
+								if (chunksize == 0)
+									if (cont == NUL) {
+										done = true
+										false
+									} else {
+										chunk( cont )
+										true
+									}
+								else {
+									cur += EWIDTH
+									true
+								}
+							}
+
+							def nextused: Boolean =
+								if (advance)
+									if (io.getByte( cur ) == USED)
+										true
+									else
+										nextused
+								else
+									false
+							
+							if (done)
+								false
+							else if (scan)
+								if (nextused) {
+									scan = false
+									true
+								} else
+									false
+							else
+								true
+						}
+						
+						def next =
+							if (hasNext) {
+								scan = true
+								new Pointer( cur + 1 )
+							} else
+								throw new java.util.NoSuchElementException( "next on empty iterator" )
+					}
+				case _ => sys.error( "can only use 'iterator' for an array" )
+			}
 		}
 		
 		override def toString =
