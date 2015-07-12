@@ -29,6 +29,7 @@ trait IOConstants {
 	val UUID =			0xE0
 	val TYPE =			0xF0
 	
+	val SSTRING_MAX = 16
 	val NUL = 0					// null pointer value
 	val BWIDTH = 5				// big (i.e. pointers, sizes) width
 	val VWIDTH = 1 + 8			// value width

@@ -260,30 +260,17 @@ abstract class IO extends IOConstants
 				putByte( POINTER )
 	
 				val io = allocPrimitive
-					
+				
 				io.putByte( UUID )
 				io.putUUID( a )
 			case a: Double =>
 				putByte( DOUBLE )
 				putDouble( a )
 			case a: String =>
-				val s = encode( a )
-				
-				if (s.length == 0 || s.length > VWIDTH - 1) {
-					putByte( POINTER )
-		
-					val io = allocPrimitive
-					
-					io.putByte( STRING )
-					io.putString( s )
-				}
-				else {
-					val cur = pos
-					
-					putByte( SSTRING|(s.length - 1) )
-					putBytes( s )
-					pad( 9 - (pos - cur) )
-				}
+				val cur = pos
+			
+				putSmallestString( a )
+				pad( VWIDTH - (pos - cur) )
 			case a: collection.Map[_, _] if a isEmpty =>
 				putByte( EMPTY )
 				pad( 8 )
@@ -316,6 +303,24 @@ abstract class IO extends IOConstants
 	def putValue( addr: Long, v: Any ) {
 		pos = addr
 		putValue( v )
+	}
+	
+	def putSmallestString( a: String ) {
+		val s = encode( a )
+		val io =
+			if (s.length > VWIDTH - 1) {
+				putByte( POINTER )
+				allocPrimitive
+			} else
+				this
+		
+		if (s.isEmpty || s.length > SSTRING_MAX) {
+			io.putByte( STRING )
+			io.putString( s )
+		} else {
+			io.putByte( SSTRING|(s.length - 1) )
+			io.putBytes( s )
+		}
 	}
 	
 	def getObject = {
