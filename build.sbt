@@ -29,6 +29,10 @@ libraryDependencies ++= Seq(
 //	"org.slf4j" % "slf4j-simple" % "1.7.7"
 //	)
 
+libraryDependencies ++= Seq(
+	"ca.hyperreal" %% "lia" % "0.16"
+	)
+
 mainClass in (Compile, run) := Some( "ca.hyperreal." + name.value + ".Main" )
 
 assemblySettings

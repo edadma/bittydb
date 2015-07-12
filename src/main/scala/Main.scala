@@ -11,5 +11,6 @@ object Main extends App
 	db.collection( "test" ).insert( Map("a" -> 4, "b" -> "fourth") )
 	println( db.root.key("test").get )
 	
-	println( db.collection( "test" ) find (Map("a" -> 2)) toList )
+	println( db.collection( "test" ) remove (Map("a" -> Map("$in" -> Seq(1, 3)))) )
+	println( db.root.key("test").get )
 }
