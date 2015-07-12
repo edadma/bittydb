@@ -15,7 +15,7 @@ trait IOConstants {
 	//					0x40	maybe SINGLE (Float)
 	val DOUBLE =		0x50
 	val DECIMAL =		0x60
-	val SSTRING =		0x70	// with length in low nibble
+	val SSTRING =		0x70	// with length - 1 in low nibble
 	val STRING =		0x80
 	val ESTRING =		0x90
 	val OBJECT =		0xA0

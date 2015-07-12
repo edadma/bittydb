@@ -12,7 +12,7 @@ class Tests extends FreeSpec with PropertyChecks with Matchers
 	
 		db.root.get shouldBe Map()
 		
-		db.root.set( "a", List(1, 2, 3) ) shouldBe false
+		db.root.set( "a" -> List(1, 2, 3) ) shouldBe false
 		db.root.get shouldBe Map( "a" -> List(1, 2, 3) )
 		
 		db.root.set( "b" -> 1234 ) shouldBe false

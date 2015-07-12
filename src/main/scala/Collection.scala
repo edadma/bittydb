@@ -36,8 +36,6 @@ class Collection( parent: Connection#Pointer, name: String ) extends IOConstants
 			parent.set( name, Nil )
 			c = parent key name
 		}
-		
-	private def empty = Iterator.empty
 	
 	def filter( query: Document ) =
 		c.iterator filter {
@@ -48,26 +46,26 @@ class Collection( parent: Connection#Pointer, name: String ) extends IOConstants
 					query forall {
 						case (k, op: Map[String, Any]) if op.keysIterator forall (Collection.operators contains _) =>
 							op.head match {
-								case ("$eq", v) => d get (k) exists (_ == v)
-								case ("$ne", v) => d get (k) exists (_ != v)
-								case ("$lt", v) => d get (k) exists (Math.predicate( '<, _, v ))
-								case ("$lte", v) => d get (k) exists (Math.predicate( '<=, _, v ))
-								case ("$gt", v) => d get (k) exists (Math.predicate( '>, _, v ))
-								case ("$gte", v) => d get (k) exists (Math.predicate( '>=, _, v ))
-								case ("$in", v: Seq[Any]) => d get (k) exists (v contains _)
-								case ("$nin", v: Seq[Any]) => d get (k) exists (!v.contains(_))
+								case ("$eq", v) => d get k exists (_ == v)
+								case ("$ne", v) => d get k exists (_ != v)
+								case ("$lt", v) => d get k exists (Math.predicate( '<, _, v ))
+								case ("$lte", v) => d get k exists (Math.predicate( '<=, _, v ))
+								case ("$gt", v) => d get k exists (Math.predicate( '>, _, v ))
+								case ("$gte", v) => d get k exists (Math.predicate( '>=, _, v ))
+								case ("$in", v: Seq[Any]) => d get k exists (v contains _)
+								case ("$nin", v: Seq[Any]) => d get k exists (!v.contains(_))
 							}
 						case (k, v) =>
-							d get (k) exists (_ == v)
+							d get k exists (_ == v)
 					}
 				}
 		}
 	
-	def find( query: Document ) = {
+	def find( query: Document = Map() ) = {
 		if (check) {
 			filter (query) map (_.get)
 		} else
-			empty
+			Iterator.empty
 	}
 	
 	def remove( query: Document ) = {

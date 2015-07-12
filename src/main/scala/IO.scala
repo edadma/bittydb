@@ -1,7 +1,7 @@
 package ca.hyperreal.bittydb
 
 import java.nio.charset.Charset
-import java.sql.Timestamp
+import java.time._
 import java.util.UUID
 
 import collection.mutable.{ListBuffer, HashMap}
@@ -197,9 +197,9 @@ abstract class IO extends IOConstants
 		getType
 	}
 	
-	def getTimestamp = new Timestamp( getLong )
+	def getTimestamp = Instant.ofEpochMilli( getLong )
 	
-	def putTimestamp( t: Timestamp ) = putLong( t.getTime )
+	def putTimestamp( t: Instant ) = putLong( t.toEpochMilli )
 	
 	def getUUID = new UUID( getLong, getLong )
 	
@@ -215,13 +215,15 @@ abstract class IO extends IOConstants
 				case NULL => null
 				case FALSE => false
 				case TRUE => true
+				case BYTE => getByte
+				case SHORT => getShort
 				case INT => getInt
 				case LONG => getLong
 				case TIMESTAMP => getTimestamp
 				case UUID => getUUID
 				case DOUBLE => getDouble
 				case sstr if (sstr&0xF0) == SSTRING =>
-					new String( getBytes(sstr&0x0F) )
+					new String( getBytes((sstr&0x0F) + 1) )
 				case STRING => getString
 				case EMPTY => Map.empty
 				case MEMBERS => getObject
@@ -251,7 +253,7 @@ abstract class IO extends IOConstants
 			case a: Long =>
 				putByte( LONG )
 				putLong( a )
-			case a: Timestamp =>
+			case a: Instant =>
 				putByte( TIMESTAMP )
 				putTimestamp( a )
 			case a: UUID =>
@@ -267,7 +269,7 @@ abstract class IO extends IOConstants
 			case a: String =>
 				val s = encode( a )
 				
-				if (s.length > VWIDTH - 1) {
+				if (s.length == 0 || s.length > VWIDTH - 1) {
 					putByte( POINTER )
 		
 					val io = allocPrimitive
@@ -278,7 +280,7 @@ abstract class IO extends IOConstants
 				else {
 					val cur = pos
 					
-					putByte( SSTRING|s.length )
+					putByte( SSTRING|(s.length - 1) )
 					putBytes( s )
 					pad( 9 - (pos - cur) )
 				}
