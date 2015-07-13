@@ -52,16 +52,16 @@ class Tests extends FreeSpec with PropertyChecks with Matchers
 		db.root.set( "a" -> Nil )
 		db.root.get shouldBe Map( "a" -> Nil )
 		
-		db.root.key( "a" ).append( 1 )
+		db.root( "a" ).append( 1 )
 		db.root.get shouldBe Map( "a" -> List(1) )
 		
-		db.root.key( "a" ).append( "asdfasdfasdf" )
+		db.root( "a" ).append( "asdfasdfasdf" )
 		db.root.get shouldBe Map( "a" -> List(1, "asdfasdfasdf") )
 		
-		db.root.key( "a" ).append( "qwerqwerqwer" )
+		db.root( "a" ).append( "qwerqwerqwer" )
 		db.root.get shouldBe Map( "a" -> List(1, "asdfasdfasdf", "qwerqwerqwer") )
 		
-		db.root.key( "a" ).append( 3 )
+		db.root( "a" ).append( 3 )
 		db.root.get shouldBe Map( "a" -> List(1, "asdfasdfasdf", "qwerqwerqwer", 3) )
 	}
 	
@@ -70,9 +70,9 @@ class Tests extends FreeSpec with PropertyChecks with Matchers
 	val db = Connection.mem()
 	
 		db.root.set( "a" -> Nil )
-		db.root.key( "a" ).prepend( 1 )
+		db.root( "a" ).prepend( 1 )
 		db.root.get shouldBe Map( "a" -> List(1) )
-		db.root.key( "a" ).prepend( 2 )
+		db.root( "a" ).prepend( 2 )
 		db.root.get shouldBe Map( "a" -> List(2, 1) )
 	}
 	
@@ -81,14 +81,14 @@ class Tests extends FreeSpec with PropertyChecks with Matchers
 	val db = Connection.mem()
 	
 		db.root.set( "a" -> Nil )
-		db.root.key( "a" ).iterator.isEmpty shouldBe true
+		db.root( "a" ).iterator.isEmpty shouldBe true
 		
-		db.root.key( "a" ).prepend( 1, 2 )
-		db.root.key( "a" ).prepend( 3, 4 )
-		db.root.key( "a" ).append( 5 )
-		db.root.key( "a" ).prepend( 6 )
+		db.root( "a" ).prepend( 1, 2 )
+		db.root( "a" ).prepend( 3, 4 )
+		db.root( "a" ).append( 5 )
+		db.root( "a" ).prepend( 6 )
 		
-		db.root.key( "a" ).iterator.drop(3).next.put( "happy" )
-		db.root.key( "a" ).members.toList shouldBe List( 6, 3, 4, "happy", 2, 5 )
+		db.root( "a" ).iterator.drop(3).next.put( "happy" )
+		db.root( "a" ).members.toList shouldBe List( 6, 3, 4, "happy", 2, 5 )
 	}
 }

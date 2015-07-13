@@ -78,12 +78,20 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 				super.get
 	}
 	
-	class Pointer( addr: Long ) {
+	class Pointer( addr: Long ) extends (Any => Pointer) {
 		def collection( name: String ) = new Collection( this, name )
+		
+		def apply( k: Any ) =
+			key( k ) match {
+				case None => sys.error( "no such key: " + k )
+				case Some( p ) => p
+			}
 		
 		def getAs[A] = get.asInstanceOf[A]
 		
 		def get = io.getValue( addr )
+		
+		def ===( a: Any ) = get == a
 		
 		def put( v: Any ) {
 			v match {
@@ -152,7 +160,7 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 				case _ => sys.error( "can only use 'remove' for an object" )
 			}
 		
-		def keyOption( k: Any ): Option[Pointer] =
+		def key( k: Any ): Option[Pointer] =
 			io.getType( addr ) match {
 				case EMPTY => None
 				case MEMBERS =>
@@ -160,14 +168,10 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 						case Left( _ ) => None
 						case Right( at ) => Some( new Pointer(at + 1 + VWIDTH) )
 					}
-				case _ => sys.error( "can only use 'keyOption/key' for an object" )
+				case _ => sys.error( "can only use 'key/apply' for an object" )
 			}
 		
-		def key( k: Any ) =
-			keyOption( k ) match {
-				case None => sys.error( "no such key: " + k )
-				case Some( p ) => p
-			}
+		def isObject = (kind&0xF0) == OBJECT
 		
 		private [bittydb] def ending =
 			io.getType( addr ) match {

@@ -10,7 +10,7 @@ object Collection {
 }
 
 class Collection( parent: Connection#Pointer, name: String ) extends IOConstants {
-	type Document = Map[Any, Any]
+	type Document = Map[_, _]
 	
 	private var c: Connection#Pointer = null
 	
@@ -18,7 +18,7 @@ class Collection( parent: Connection#Pointer, name: String ) extends IOConstants
 	
 	private def check =
 		if (c eq null)
-			parent.keyOption( name ) match {
+			parent.key( name ) match {
 				case None =>
 					false
 				case Some( p ) =>
@@ -34,14 +34,14 @@ class Collection( parent: Connection#Pointer, name: String ) extends IOConstants
 		if (!check)
 		{
 			parent.set( name, Nil )
-			c = parent key name
+			c = parent( name )
 		}
 	
-	def filter( query: Document ) =
+	def filter( query: Map[_, _] ) =
 		c.iterator filter {
 			m =>
 				(m.kind&0xF0) == OBJECT && {
-					val d = m.getAs[Document]
+					val d = m.getAs[Map[Any, Any]]
 					
 					query forall {
 						case (k, op: Map[String, Any]) if op.keysIterator forall (Collection.operators contains _) =>
@@ -61,7 +61,16 @@ class Collection( parent: Connection#Pointer, name: String ) extends IOConstants
 				}
 		}
 	
+	def filter( query: Connection#Cursor => Boolean ) = c.iterator filter query
+	
 	def find( query: Document = Map() ) = {
+		if (check) {
+			filter (query) map (_.get)
+		} else
+			Iterator.empty
+	}
+	
+	def find( query: Connection#Cursor => Boolean ) = {
 		if (check) {
 			filter (query) map (_.get)
 		} else
@@ -85,7 +94,7 @@ class Collection( parent: Connection#Pointer, name: String ) extends IOConstants
 	def insert( documents: Document* ) {
 		create
 		
-		for (d <- documents)			
+		for (d <- documents.asInstanceOf[Seq[Map[Any, Any]]])
 			c.append( if (d contains "_id") d else d + ("_id" -> randomUUID) )
 	}
 }
