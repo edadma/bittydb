@@ -47,8 +47,12 @@ BittyDB is distributed under the MIT License, meaning that you are free to use i
 - SBT 13.8+
 - Java 8+
 
-Clone and build:
+### Clone and build
 
-	git clone git://github.com/edadma/sscheme.git
-	cd sscheme
-	sbt assembly
+	git clone git://github.com/edadma/bittydb.git
+	cd bittydb
+	sbt publishLocal
+	
+add the following to your build.sbt
+	
+	libraryDependencies += "ca.hyperreal" %% "bittydb" % "0.1"
