@@ -9,7 +9,7 @@ object Main extends App
 	
 	  // insert some documents into a collection named **test**,
 	  //   which is created since it doesn't exist at this point,
-	  //   inserting **_id**
+	  //   adding a field **_id** with a UUID value to every document
 	  db( "test" ).insert( Map("a" -> 1, "b" -> "first"), Map("a" -> 2, "b" -> "second"), Map("a" -> 3, "b" -> "third") )
 	  
 	  // show the contents of the entire database

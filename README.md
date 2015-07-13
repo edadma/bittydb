@@ -20,7 +20,7 @@ Here is a simple example demonstrating database insertion, querying and deletion
 	
 	  // insert some documents into a collection named **test**,
 	  //   which is created since it doesn't exist at this point,
-	  //   inserting **_id**
+	  //   adding a field **_id** with a UUID value to every document
 	  db( "test" ).insert( Map("a" -> 1, "b" -> "first"), Map("a" -> 2, "b" -> "second"), Map("a" -> 3, "b" -> "third") )
 	  
 	  // show the contents of the entire database
@@ -41,10 +41,10 @@ Here is a simple example demonstrating database insertion, querying and deletion
 
 The above example should output something very similar (the UUID's will be different) to
 
-	List(Map(a -> 1, b -> first, _id -> df072315-f63a-4762-8b58-fdcebc52bf75), Map(a -> 1, b -> second, _id -> e616428b-31b8-4b52-8a81-f3f6186d104c), Map(a -> 3, b -> third, _id -> eb981e0d-97b8-48d0-ae9d-1fcf3dab5775))
-	List(Map(a -> 1, b -> first, _id -> df072315-f63a-4762-8b58-fdcebc52bf75), Map(a -> 1, b -> second, _id -> e616428b-31b8-4b52-8a81-f3f6186d104c))
-	List(Map(a -> 3, b -> third, _id -> eb981e0d-97b8-48d0-ae9d-1fcf3dab5775))
-	List(Map(a -> 3, b -> 第三, _id -> eb981e0d-97b8-48d0-ae9d-1fcf3dab5775))
+	List(Map(a -> 1, b -> first, _id -> 85fac459-2638-4524-b671-d35bb4fd1b86), Map(a -> 2, b -> second, _id -> 7484e63b-6598-4d6c-9bdd-f25c69a942f1), Map(a -> 3, b -> third, _id -> 543de2cb-5899-49a7-8f37-741f6fd9c4d5))
+	List(Map(a -> 1, b -> first, _id -> 85fac459-2638-4524-b671-d35bb4fd1b86), Map(a -> 2, b -> second, _id -> 7484e63b-6598-4d6c-9bdd-f25c69a942f1))
+	List(Map(a -> 3, b -> third, _id -> 543de2cb-5899-49a7-8f37-741f6fd9c4d5))
+	List(Map(a -> 3, b -> 第三, _id -> 543de2cb-5899-49a7-8f37-741f6fd9c4d5))
 	
 	
 ## License
