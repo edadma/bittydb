@@ -60,7 +60,7 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 	
 	private def invalid = sys.error( "invalid database" )
 	
-	val root = new Pointer( _root )
+	val root = new DBFilePointer( _root )
 	
 	def collection( name: String ) = new Collection( root, name )
 	
@@ -68,7 +68,7 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 	
 	override def toString = "connection to " + io
 	
-	class Cursor( elem: Long ) extends Pointer( elem + 1 ) {
+	class Cursor( elem: Long ) extends DBFilePointer( elem + 1 ) {
 		def remove = io.putByte( elem, UNUSED )
 		
 		override def get =
@@ -78,12 +78,21 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 				super.get
 	}
 	
-	class Pointer( addr: Long ) extends (Any => Pointer) {
+	class DBFilePointer( protected val addr: Long ) extends Pointer
+	
+	abstract class Pointer extends (Any => Pointer) {
+		protected def addr: Long
+		
 		def collection( name: String ) = new Collection( this, name )
 		
 		def apply( k: Any ) =
 			key( k ) match {
-				case None => sys.error( "no such key: " + k )
+				case None =>
+					new Pointer {
+						def addr = sys.error( "invalid pointer" )
+						
+						override def ===( a: Any ) = false
+					}
 				case Some( p ) => p
 			}
 		
@@ -160,18 +169,15 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 				case _ => sys.error( "can only use 'remove' for an object" )
 			}
 		
-		def key( k: Any ): Option[Pointer] =
+		def key( k: Any ): Option[DBFilePointer] =
 			io.getType( addr ) match {
-				case EMPTY => None
 				case MEMBERS =>
 					lookup( k ) match {
 						case Left( _ ) => None
-						case Right( at ) => Some( new Pointer(at + 1 + VWIDTH) )
+						case Right( at ) => Some( new DBFilePointer(at + 1 + VWIDTH) )
 					}
-				case _ => sys.error( "can only use 'key/apply' for an object" )
+				case _ => None
 			}
-		
-		def isObject = (kind&0xF0) == OBJECT
 		
 		private [bittydb] def ending =
 			io.getType( addr ) match {

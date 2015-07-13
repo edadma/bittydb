@@ -14,5 +14,5 @@ object Main extends App
 	println( db.collection( "test" ) find () toList )
 	
 	println( db.collection( "test" ) find (Map("a" -> Map("$in" -> Seq(1, 3))): Map[Any, Any]) toList )
-	println( db.collection( "test" ) find (c => c.isObject && c("a") === 1) toList )
+	println( db.collection( "test" ) find (_("a") === 1) toList )
 }
