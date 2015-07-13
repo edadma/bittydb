@@ -7,28 +7,37 @@ import java.nio.charset.StandardCharsets.UTF_8
 import util.Either
 import collection.{TraversableOnce, AbstractIterator, Map => CMap}
 
+import ca.hyperreal.lia.Math
+
 
 object Connection
 {
-	def disk( file: String, charset: Charset = UTF_8 ): Connection = disk( new File(file), charset )
+	def disk( file: String, options: (String, Any)* ): Connection = disk( new File(file), options: _* )
 	
-	def disk( f: File, charset: Charset ) = new Connection( new DiskIO(f), charset )
+	def disk( f: File, options: (String, Any)* ) = new Connection( new DiskIO(f), options )
 	
-	def mem( charset: Charset = UTF_8 ) = new Connection( new MemIO, charset )
+	def mem( options: (String, Any)* ) = new Connection( new MemIO, options )
 }
 
-class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOConstants
+class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) extends IOConstants
 {
 	private [bittydb] var version: String = _
 	private [bittydb] var freeListPtr: Long = _
 	private [bittydb] var freeList: Long = _
 	private [bittydb] var _root: Long = _
 	
+	private [bittydb] var charsetOption = UTF_8
+	
+	for (opt <- options) 
+		opt match {
+			case ("charset", cs: String) => charsetOption = Charset.forName( cs )
+		}
+		
 	if (io.size == 0) {
 		version = VERSION
 		io putByteString s"BittyDB $version"
-		io.charset = charset
-		io putByteString charset.name
+		io.charset = charsetOption
+		io putByteString charsetOption.name
 		freeListPtr = io.pos
 		freeList = 0
 		io putBig freeList
@@ -49,7 +58,8 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 					
 				io.getByteString match {
 					case Some( cs ) =>
-						io.charset = Charset.forName( cs )
+						charsetOption = Charset.forName( cs )
+						io.charset = charsetOption
 						freeListPtr = io.pos
 						freeList = io.getBig
 						_root = io.pos
@@ -60,9 +70,9 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 	
 	private def invalid = sys.error( "invalid database" )
 	
-	val root = new DBFilePointer( _root )
+	def apply( name: String ) = new Collection( root, name )
 	
-	def collection( name: String ) = new Collection( root, name )
+	val root = new DBFilePointer( _root )
 	
 	def close = io.close
 	
@@ -101,6 +111,10 @@ class Connection( private [bittydb] val io: IO, charset: Charset ) extends IOCon
 		def get = io.getValue( addr )
 		
 		def ===( a: Any ) = get == a
+		
+		def <( a: Any ) = Math.predicate( '<, get, a )
+		
+		def in( s: Set[Any] ) = s( get )
 		
 		def put( v: Any ) {
 			v match {

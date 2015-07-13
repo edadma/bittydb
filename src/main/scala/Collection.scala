@@ -90,6 +90,23 @@ class Collection( parent: Connection#Pointer, name: String ) extends IOConstants
 			
 	def remove( query: Connection#Cursor => Boolean ): Int = remove( filter (query) )
 	
+	def update( cursor: Iterator[Connection#Cursor], updates: Seq[(String, Any)] ) =
+		if (check) {
+			var count = 0
+			
+			for (v <- cursor) {
+				for ((f, u) <- updates)
+					v(f).put( u )
+
+				count += 1
+			}
+			
+			count
+		} else
+			0
+			
+	def update( query: Connection#Cursor => Boolean, updates: (String, Any)* ): Int = update( filter (query), updates )
+	
 	def insert( documents: Document* ) {
 		create
 		
