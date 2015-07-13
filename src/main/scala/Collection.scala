@@ -63,25 +63,21 @@ class Collection( parent: Connection#Pointer, name: String ) extends IOConstants
 	
 	def filter( query: Connection#Cursor => Boolean ) = c.iterator filter query
 	
-	def find( query: Document = Map() ) = {
+	def find( cursor: Iterator[Connection#Cursor] ) =
 		if (check) {
-			filter (query) map (_.get)
+			cursor map (_.get)
 		} else
 			Iterator.empty
-	}
 	
-	def find( query: Connection#Cursor => Boolean ) = {
-		if (check) {
-			filter (query) map (_.get)
-		} else
-			Iterator.empty
-	}
+	def find( query: Document = Map() ): Iterator[Any] = find( filter (query) )
 	
-	def remove( query: Document ) = {
+	def find( query: Connection#Cursor => Boolean ): Iterator[Any] = find( filter (query) )
+	
+	def remove( cursor: Iterator[Connection#Cursor] ) =
 		if (check) {
 			var count = 0
 			
-			for (v <- filter (query)) {
+			for (v <- cursor) {
 				v.remove
 				count += 1
 			}
@@ -89,7 +85,10 @@ class Collection( parent: Connection#Pointer, name: String ) extends IOConstants
 			count
 		} else
 			0
-	}
+			
+	def remove( query: Document ): Int = remove( filter (query) )
+			
+	def remove( query: Connection#Cursor => Boolean ): Int = remove( filter (query) )
 	
 	def insert( documents: Document* ) {
 		create
