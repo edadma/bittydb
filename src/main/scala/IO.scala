@@ -177,14 +177,13 @@ abstract class IO extends IOConstants
 		}
 	}
 	
-	def getString = new String( getBytes(getLen), charset )
+	def getString( len: Int, cs: Charset = charset ) = new String( getBytes(len), cs )
 	
-	def putString( s: Array[Byte] ) {
-		putLen( s.length )
-		putBytes( s )
-	}
-	
-	def putString( s: String ) {putString( encode(s) )}
+// 	def putString( s: Array[Byte] ) {
+// 		putBytes( s )
+// 	}
+// 	
+// 	def putString( s: String ) {putString( encode(s) )}
 
 	def getType: Int =
 		getUnsignedByte match {
@@ -208,6 +207,18 @@ abstract class IO extends IOConstants
 		putLong( id.getLeastSignificantBits )
 	}
 	
+	object Type1 {
+		def unapply( t: Int ): Option[(Int, Int)] = {
+			Some( t&0xF0, t&0x0F )
+		}
+	}
+	
+	object Type2 {
+		def unapply( t: Int ): Option[(Int, Int, Int)] = {
+			Some( t&0xF0, t&0x04, t&0x03 )
+		}
+	}
+
 	def getValue: Any = {
 		val cur = pos
 		val res =
@@ -222,9 +233,19 @@ abstract class IO extends IOConstants
 				case TIMESTAMP => getTimestamp
 				case UUID => getUUID
 				case DOUBLE => getDouble
-				case sstr if (sstr&0xF0) == SSTRING =>
-					new String( getBytes((sstr&0x0F) + 1) )
-				case STRING => getString
+				case Type1( SSTRING, len ) => getString( len + 1 )
+				case Type2( STRING, encoding, width ) =>
+					val len =
+						width match {
+							case UBYTE_LENGTH => getUnsignedByte
+							case USHORT_LENGTH => getUnsignedShort
+							case INT_LENGTH => getInt
+						}
+
+					if (encoding == WITH_ENCODING)
+						getString( len, Charset.forName(getByteString.get) )
+					else
+						getString( len )
 				case EMPTY => Map.empty
 				case MEMBERS => getObject
 				case NIL => Nil
@@ -246,7 +267,7 @@ abstract class IO extends IOConstants
 			case true =>
 				putByte( TRUE )
 				pad( 8 )
-			case a: Int =>
+			case a: Int =>//if Byte.MinValue <= a && a <= Byte.MaxValue =>
 				putByte( INT )
 				putInt( a )
 				pad( 4 )
@@ -269,7 +290,7 @@ abstract class IO extends IOConstants
 			case a: String =>
 				val cur = pos
 			
-				putSmallestString( a )
+				putString( a )
 				pad( VWIDTH - (pos - cur) )
 			case a: collection.Map[_, _] if a isEmpty =>
 				putByte( EMPTY )
@@ -305,7 +326,7 @@ abstract class IO extends IOConstants
 		putValue( v )
 	}
 	
-	def putSmallestString( a: String ) {
+	def putString( a: String ) {
 		val s = encode( a )
 		val io =
 			if (s.length > VWIDTH - 1) {
@@ -315,8 +336,19 @@ abstract class IO extends IOConstants
 				this
 		
 		if (s.isEmpty || s.length > SSTRING_MAX) {
-			io.putByte( STRING )
-			io.putString( s )
+			s.length match {
+				case l if l < 256 =>
+					io.putByte( STRING|UBYTE_LENGTH )
+					io.putByte( l )
+				case l if l < 65536 => 
+					io.putByte( STRING|USHORT_LENGTH )
+					io.putShort( l )
+				case l =>
+					io.putByte( STRING|INT_LENGTH )
+					io.putInt( l )
+			}
+			
+			io.putBytes( s )
 		} else {
 			io.putByte( SSTRING|(s.length - 1) )
 			io.putBytes( s )
