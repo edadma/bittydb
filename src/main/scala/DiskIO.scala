@@ -26,7 +26,7 @@ class DiskIO( f: File ) extends IO
 		l
 	}
 	
-	def getByte: Byte = file.readByte
+	def getByte: Int = file.readByte
 	
 	def putByte( b: Int ) = file.writeByte( b )
 	
@@ -45,7 +45,7 @@ class DiskIO( f: File ) extends IO
 	
 	def putChar( c: Char ) = file.writeChar( c )
 	
-	def getShort: Short = file.readShort
+	def getShort: Int = file.readShort
 	
 	def putShort( s: Int ) = file.writeShort( s )
 	

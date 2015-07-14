@@ -25,7 +25,7 @@ class MemIO extends IO
 		size
 	}
 	
-	def getByte: Byte = {
+	def getByte: Int = {
 		db.getting( 1 )
 		db.buffer.get
 	}
@@ -61,7 +61,7 @@ class MemIO extends IO
 		db.buffer.putChar( c )
 	}
 	
-	def getShort: Short = {
+	def getShort: Int = {
 		db.getting( 2 )
 		db.buffer.getShort
 	}

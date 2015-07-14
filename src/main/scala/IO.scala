@@ -2,7 +2,7 @@ package ca.hyperreal.bittydb
 
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
-import java.time._
+import java.time.{Instant, OffsetDateTime, ZoneOffset}
 import java.util.UUID
 
 import collection.mutable.{ListBuffer, HashMap}
@@ -11,7 +11,10 @@ import collection.mutable.{ListBuffer, HashMap}
 abstract class IO extends IOConstants
 {
 	private [bittydb] var charset: Charset = UTF_8
-	private [bittydb] var bwidth = 5					// big (i.e. pointers, sizes) width
+	private [bittydb] var bwidth = 5					// big (i.e. pointers, sizes) width (2 minimum)
+	private [bittydb] var kwidth = 8					// key width
+	private [bittydb] var vwidth = 8					// value width
+	private [bittydb] var ewidth = 8					// element width
 	
 	//
 	// abstract methods
@@ -33,7 +36,7 @@ abstract class IO extends IOConstants
 	
 	def append: Long
 	
-	def getByte: Byte
+	def getByte: Int
 	
 	def putByte( b: Int )
 	
@@ -47,7 +50,7 @@ abstract class IO extends IOConstants
 	
 	def putChar( c: Char )
 	
-	def getShort: Short
+	def getShort: Int
 	
 	def putShort( s: Int )
 	
@@ -154,39 +157,39 @@ abstract class IO extends IOConstants
 		writeByteChars( s )
 	}
 	
-	def getLen: Int = {
-		var len = 0
-		
-		def read {
-			val b = getByte
-			len = (len << 7) | (b&0x7F)
-			
-			if ((b&0x80) != 0)
-				read
-		}
-
-		read
-		len
-	}
-	
-	def putLen( l: Int ) {
-		if (l == 0)
-			putByte( 0 )
-		else {
-			var downshift = 28
-			var compare = 0x10000000
-			
-			while (l < compare) {
-				downshift -= 7
-				compare >>= 7
-			}
-			
-			while (downshift >= 0) {
-				putByte( (if (downshift > 0) 0x80 else 0) | ((l >> downshift)&0x7F) )
-				downshift -= 7
-			}
-		}
-	}
+// 	def getLen: Int = {
+// 		var len = 0
+// 		
+// 		def read {
+// 			val b = getByte
+// 			len = (len << 7) | (b&0x7F)
+// 			
+// 			if ((b&0x80) != 0)
+// 				read
+// 		}
+// 
+// 		read
+// 		len
+// 	}
+// 	
+// 	def putLen( l: Int ) {
+// 		if (l == 0)
+// 			putByte( 0 )
+// 		else {
+// 			var downshift = 28
+// 			var compare = 0x10000000
+// 			
+// 			while (l < compare) {
+// 				downshift -= 7
+// 				compare >>= 7
+// 			}
+// 			
+// 			while (downshift >= 0) {
+// 				putByte( (if (downshift > 0) 0x80 else 0) | ((l >> downshift)&0x7F) )
+// 				downshift -= 7
+// 			}
+// 		}
+// 	}
 	
 	def getString( len: Int, cs: Charset = charset ) = new String( getBytes(len), cs )
 	
@@ -210,6 +213,19 @@ abstract class IO extends IOConstants
 	def getTimestamp = Instant.ofEpochMilli( getLong )
 	
 	def putTimestamp( t: Instant ) = putLong( t.toEpochMilli )
+	
+	def getDatetime = OffsetDateTime.of( getInt, getByte, getByte, getByte, getByte, getByte, getInt, ZoneOffset.ofTotalSeconds(getInt) )
+	
+	def putDatetime( datetime: OffsetDateTime ) = {
+		putInt( datetime.getYear )
+		putByte( datetime.getMonthValue )
+		putByte( datetime.getDayOfMonth )
+		putByte( datetime.getHour )
+		putByte( datetime.getMinute )
+		putByte( datetime.getSecond )
+		putInt( datetime.getNano )
+		putInt( datetime.getOffset.getTotalSeconds )
+	}
 	
 	def getUUID = new UUID( getLong, getLong )
 	
@@ -278,9 +294,29 @@ abstract class IO extends IOConstants
 			case true =>
 				putByte( TRUE )
 				pad( 8 )
-			case a: Int =>//if Byte.MinValue <= a && a <= Byte.MaxValue =>
+			case a: Int if a.isValidByte =>
+				putByte( BYTE )
+				putByte( a )
+				pad( 7 )
+			case a: Int if a.isValidShort =>
+				putByte( SHORT )
+				putShort( a )
+				pad( 6 )
+			case a: Int =>
 				putByte( INT )
 				putInt( a )
+				pad( 4 )
+			case a: Long if a.isValidByte =>
+				putByte( BYTE )
+				putByte( a.asInstanceOf[Int] )
+				pad( 7 )
+			case a: Long if a.isValidShort =>
+				putByte( SHORT )
+				putShort( a.asInstanceOf[Int] )
+				pad( 6 )
+			case a: Long if a.isValidInt=>
+				putByte( INT )
+				putInt( a .asInstanceOf[Int])
 				pad( 4 )
 			case a: Long =>
 				putByte( LONG )
@@ -546,7 +582,7 @@ abstract class IO extends IOConstants
 	
 	def skipDouble = skip( 8 )
 	
-	def skipString = skip( getLen )
+//	def skipString = skip( getLen )
 	
 	def skipValue = skip( 9 )
 	

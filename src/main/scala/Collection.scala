@@ -49,7 +49,6 @@ class Collection( parent: Connection#Pointer, name: String ) extends IOConstants
 				(m.kind&0xF0) == OBJECT && {
 					val d = m.getAs[Map[Any, Any]]
 					
-					println( query, d )
 					query forall {
 						case (k, op: Map[String, Any]) if op.keysIterator forall (QUERY_PREDICATES contains _) =>
 							op.head match {

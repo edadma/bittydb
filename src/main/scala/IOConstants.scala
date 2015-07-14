@@ -35,11 +35,13 @@ trait IOConstants {
 	val WITH_ENCODING = 4
 	val SSTRING_MAX = 16
 	
-	val NUL = 0					// null pointer value
+	val DATETIME_WIDTH = 17
 	val VWIDTH = 1 + 8			// value width
 	val PWIDTH = 1 + 2*VWIDTH 	// pair width
 	val EWIDTH = 1 + VWIDTH
-	
+
+	val NUL = 0					// null pointer value
+
 	val USED = 0
 	val UNUSED = 1
 }
