@@ -1,15 +1,21 @@
 package ca.hyperreal.bittydb
 
 import java.util.UUID._
+import java.time.Instant
+
+import collection.mutable.ListBuffer
 
 import ca.hyperreal.lia.Math
 
 
 object Collection {
-	val operators = Set( "$eq", "$lt", "$gt", "$lte", "$gte", "$ne", "$in", "$nin" )
+	val QUERY_PREDICATES = Set( "$eq", "$lt", "$gt", "$lte", "$gte", "$ne", "$in", "$nin" )
+	val UPDATE_OPERATORS = Set( "$set", "$unset", "$datetime", "$timestamp" )
 }
 
 class Collection( parent: Connection#Pointer, name: String ) extends IOConstants {
+	import Collection._
+	
 	type Document = Map[_, _]
 	
 	private var c: Connection#Pointer = null
@@ -43,8 +49,9 @@ class Collection( parent: Connection#Pointer, name: String ) extends IOConstants
 				(m.kind&0xF0) == OBJECT && {
 					val d = m.getAs[Map[Any, Any]]
 					
+					println( query, d )
 					query forall {
-						case (k, op: Map[String, Any]) if op.keysIterator forall (Collection.operators contains _) =>
+						case (k, op: Map[String, Any]) if op.keysIterator forall (QUERY_PREDICATES contains _) =>
 							op.head match {
 								case ("$eq", v) => d get k exists (_ == v)
 								case ("$ne", v) => d get k exists (_ != v)
@@ -90,22 +97,50 @@ class Collection( parent: Connection#Pointer, name: String ) extends IOConstants
 			
 	def remove( query: Connection#Cursor => Boolean ): Int = remove( filter (query) )
 	
-	def update( cursor: Iterator[Connection#Cursor], updates: Seq[(String, Any)] ) =
+	def update( cursor: Iterator[Connection#Cursor], updates: Seq[UpdateOperator] ) =
 		if (check) {
 			var count = 0
-			
-			for (v <- cursor) {
-				for ((f, u) <- updates)
-					v(f).put( u )
+
+			for (c <- cursor) {
+				updates foreach {
+					_ match {
+						case DocumentUpdateOperator( value ) => c.put( value )
+						case SetUpdateOperator( field, value ) => c(field).put( value )
+						case UnsetUpdateOperator( field ) => c.remove( field )
+						case DateUpdateOperator( field ) => 
+						case TimestampUpdateOperator( field ) => c(field).put( Instant.now )
+					}
+				}
 
 				count += 1
 			}
-			
+
 			count
 		} else
 			0
-			
-	def update( query: Connection#Cursor => Boolean, updates: (String, Any)* ): Int = update( filter (query), updates )
+	
+	def update( query: Connection#Cursor => Boolean, updates: (String, Any)* ): Int =
+		update( filter (query), updates map {case (field, update) => SetUpdateOperator( field, update )} )
+	
+	def update( query: Document, updates: Any ): Int = {
+		val ops = new ListBuffer[UpdateOperator]
+		
+		updates match {
+			case map: Map[String, Any] if map.keysIterator forall (_.isInstanceOf[String]) => 
+				if (map.keysIterator exists UPDATE_OPERATORS)
+					for (update <- map)
+						update match {
+							case ("$set", fields: Map[_, _]) => ops ++= fields map {case (field, value) => SetUpdateOperator( field, value )}
+//							case ("$unset", fields: Map[_, _]) => ops ++= fields map {case (field, value) => UnsetUpdateOperator( field )}
+							case _ => sys.error( "udpate: 'updates' must be either all update operators, or the update value itself" )
+						}
+				else
+					ops += DocumentUpdateOperator( map )
+			case _ => ops += DocumentUpdateOperator( updates )
+		}
+		
+		update( filter (query), ops )
+	}
 	
 	def insert( documents: Document* ) {
 		create
@@ -113,4 +148,11 @@ class Collection( parent: Connection#Pointer, name: String ) extends IOConstants
 		for (d <- documents.asInstanceOf[Seq[Map[Any, Any]]])
 			c.append( if (d contains "_id") d else d + ("_id" -> randomUUID) )
 	}
+	
+	abstract class UpdateOperator
+	case class DocumentUpdateOperator( value: Any ) extends UpdateOperator
+	case class SetUpdateOperator( field: Any, value: Any ) extends UpdateOperator
+	case class UnsetUpdateOperator( field: Any ) extends UpdateOperator
+	case class DateUpdateOperator( field: Any ) extends UpdateOperator
+	case class TimestampUpdateOperator( field: Any ) extends UpdateOperator
 }

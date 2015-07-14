@@ -108,6 +108,20 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 				case None =>
 					new Pointer {
 						def addr = sys.error( "invalid pointer" )
+		
+						override def !==( a: Any ) = get != a
+						
+						override def <( a: Any ) = false
+						
+						override def >( a: Any ) = false
+						
+						override def <=( a: Any ) = false
+						
+						override def >=( a: Any ) = false
+						
+						override def in( s: Set[Any] ) = false
+						
+						override def nin( s: Set[Any] ) = false
 						
 						override def ===( a: Any ) = false
 					}
