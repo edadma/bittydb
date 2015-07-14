@@ -1,6 +1,7 @@
 package ca.hyperreal.bittydb
 
 import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets.UTF_8
 import java.time._
 import java.util.UUID
 
@@ -9,8 +10,9 @@ import collection.mutable.{ListBuffer, HashMap}
 
 abstract class IO extends IOConstants
 {
-	private [bittydb] var charset: Charset = null
-
+	private [bittydb] var charset: Charset = UTF_8
+	private [bittydb] var bwidth = 5					// big (i.e. pointers, sizes) width
+	
 	//
 	// abstract methods
 	//
@@ -71,7 +73,16 @@ abstract class IO extends IOConstants
 	// i/o methods based on abstract methods
 	//
 	
-	def getBig: Long = (getByte.asInstanceOf[Long]&0xFF)<<32 | getInt.asInstanceOf[Long]&0xFFFFFFFFL
+	def getBig: Long = {//(getByte.asInstanceOf[Long]&0xFF)<<32 | getInt.asInstanceOf[Long]&0xFFFFFFFFL
+		var res = 0L
+		
+		for (_ <- 1 to bwidth) {
+			res <<= 8
+			res |= getUnsignedByte
+		}
+		
+		res
+	}
 	
 	def putBig( l: Long ) {
 		putByte( (l>>32).asInstanceOf[Int] )
@@ -384,7 +395,7 @@ abstract class IO extends IOConstants
 	}
 	
 	def putObject( m: collection.Map[_, _] ) {
-		padBig//putBig( pos + BWIDTH )	// last chunk pointer
+		padBig//putBig( pos + bwidth )	// last chunk pointer
 		putObjectChunk( m )
 	}
 	
@@ -398,7 +409,7 @@ abstract class IO extends IOConstants
 		for (p <- m)
 			putPair( p )
 	
-		putBig( start, pos - start - BWIDTH )
+		putBig( start, pos - start - bwidth )
 	}
 	
 	def putPair( kv: (Any, Any) ) {
@@ -465,7 +476,7 @@ abstract class IO extends IOConstants
 			putValue( e )
 		}
 	
-		putBig( start, pos - start - BWIDTH )
+		putBig( start, pos - start - bwidth )
 	}
 
 	//
@@ -527,7 +538,7 @@ abstract class IO extends IOConstants
 			skipByte( getBig )
 	}
 	
-	def skipBig = skip( BWIDTH )
+	def skipBig = skip( bwidth )
 	
 	def skipInt = skip( 4 )
 	
@@ -543,7 +554,7 @@ abstract class IO extends IOConstants
 		for (_ <- 1L to n)
 			putByte( 0 )
 			
-	def padBig = pad( BWIDTH )
+	def padBig = pad( bwidth )
 	
 	def padValue = pad( 8 )
 	

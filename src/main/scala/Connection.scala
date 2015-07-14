@@ -2,7 +2,6 @@ package ca.hyperreal.bittydb
 
 import java.io.File
 import java.nio.charset.Charset
-import java.nio.charset.StandardCharsets.UTF_8
 
 import util.Either
 import collection.{TraversableOnce, AbstractIterator, Map => CMap}
@@ -26,18 +25,23 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 	private [bittydb] var freeList: Long = _
 	private [bittydb] var _root: Long = _
 	
-	private [bittydb] var charsetOption = UTF_8
-	
-	for (opt <- options) 
-		opt match {
-			case ("charset", cs: String) => charsetOption = Charset.forName( cs )
-		}
-		
 	if (io.size == 0) {
 		version = VERSION
 		io putByteString s"BittyDB $version"
-		io.charset = charsetOption
-		io putByteString charsetOption.name
+			
+		for (opt <- options)
+			opt match {
+				case ("charset", cs: String) => io.charset = Charset.forName( cs )
+				case ("bwidth", n: Int) =>
+					if (1 <= n && n <= 8)
+						io.bwidth = n
+					else
+						sys.error( "'bwidth' option is between 1 and 8 (inclusive)" )
+			}
+
+		io putByteString io.charset.name
+		io putByte io.bwidth
+		
 		freeListPtr = io.pos
 		freeList = 0
 		io putBig freeList
@@ -57,14 +61,18 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 					sys.error( "attempting to read database of newer format version" )
 					
 				io.getByteString match {
-					case Some( cs ) =>
-						charsetOption = Charset.forName( cs )
-						io.charset = charsetOption
-						freeListPtr = io.pos
-						freeList = io.getBig
-						_root = io.pos
+					case Some( cs ) => io.charset = Charset.forName( cs )
 					case _ => invalid
 				}
+				
+				io.getByte match {
+					case n if 1 <= n && n <= 8 => io.bwidth = n
+					case _ => invalid
+				}
+				
+				freeListPtr = io.pos
+				freeList = io.getBig
+				_root = io.pos
 			case _ => invalid
 		}
 	
@@ -112,9 +120,19 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 		
 		def ===( a: Any ) = get == a
 		
+		def !==( a: Any ) = get != a
+		
 		def <( a: Any ) = Math.predicate( '<, get, a )
 		
+		def >( a: Any ) = Math.predicate( '>, get, a )
+		
+		def <=( a: Any ) = Math.predicate( '<=, get, a )
+		
+		def >=( a: Any ) = Math.predicate( '>=, get, a )
+		
 		def in( s: Set[Any] ) = s( get )
+		
+		def nin( s: Set[Any] ) = !s( get )
 		
 		def put( v: Any ) {
 			v match {
@@ -206,9 +224,9 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 						
 					io.skipBig
 					
-					val res = io.pos + BWIDTH + io.getBig == io.size
+					val res = io.pos + io.bwidth + io.getBig == io.size
 					
-					io.pos -= 2*BWIDTH
+					io.pos -= 2*io.bwidth
 					res
 				case STRING => sys.error( "not yet" )
 				case BIGINT => sys.error( "not yet" )
@@ -275,12 +293,12 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 					} else {
 						io.inert {
 							if (io.getBig( header ) == NUL)
-								io.putBig( header, header + 2*BWIDTH )
+								io.putBig( header, header + 2*io.bwidth )
 						}
 						
 						val cont = io.allocComposite
 						
-						cont.backpatch( io, header + BWIDTH )
+						cont.backpatch( io, header + io.bwidth )
 						cont.putArrayChunk( s )
 					}
 				case _ => sys.error( "can only use 'append' for an array" )
@@ -298,12 +316,12 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 					val header = io.pos
 					
 					val first = io.getBig match {
-						case NUL => header + 2*BWIDTH
+						case NUL => header + 2*io.bwidth
 						case p => p
 					}
 					
 					if (io.getBig == NUL)
-						io.putBig( io.pos - BWIDTH, header + 2*BWIDTH )
+						io.putBig( io.pos - io.bwidth, header + 2*io.bwidth )
 						
 					io.pos = header
 					
@@ -328,7 +346,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 				case ELEMENTS =>
 					val header = io.pos
 					val first = io.getBig match {
-						case NUL => header + 2*BWIDTH
+						case NUL => header + 2*io.bwidth
 						case p => p
 					}
 					
@@ -344,7 +362,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 						private def chunk( p: Long ) {
 							cont = io.getBig( p )
 							chunksize = io.getBig
-							cur = p + 2*BWIDTH
+							cur = p + 2*io.bwidth
 						}
 						
 						def hasNext = {

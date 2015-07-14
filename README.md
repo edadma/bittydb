@@ -65,6 +65,6 @@ BittyDB is distributed under the MIT License, meaning that you are free to use i
 	cd bittydb
 	sbt publishLocal
 	
-Add the following to your build.sbt
+Add the following to your `build.sbt`
 	
 	libraryDependencies += "ca.hyperreal" %% "bittydb" % "0.1"
