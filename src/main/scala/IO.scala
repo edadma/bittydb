@@ -258,6 +258,7 @@ abstract class IO extends IOConstants
 				case INT => getInt
 				case LONG => getLong
 				case TIMESTAMP => getTimestamp
+				case DATETIME => getDatetime
 				case UUID => getUUID
 				case DOUBLE => getDouble
 				case Type1( SSTRING, len ) => getString( len + 1 )
@@ -324,6 +325,12 @@ abstract class IO extends IOConstants
 			case a: Instant =>
 				putByte( TIMESTAMP )
 				putTimestamp( a )
+			case a: OffsetDateTime =>
+				putByte( POINTER )
+	
+				val io = allocPrimitive
+				
+				io.putDatetime( a )
 			case a: UUID =>
 				putByte( POINTER )
 	
