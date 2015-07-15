@@ -30,7 +30,7 @@ libraryDependencies ++= Seq(
 //	)
 
 libraryDependencies ++= Seq(
-	"ca.hyperreal" %% "lia" % "0.16"
+	"ca.hyperreal" %% "lia" % "0.17"
 	)
 
 mainClass in (Compile, run) := Some( "ca.hyperreal." + name.value + ".Main" )
