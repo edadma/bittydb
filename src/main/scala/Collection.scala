@@ -44,7 +44,7 @@ class Collection( parent: Connection#Pointer, name: String ) extends IOConstants
 		}
 	
 	def filter( query: Map[_, _] ) =
-		c.iterator filter {
+		c.arrayIterator filter {
 			m =>
 				(m.kind&0xF0) == OBJECT && {
 					val d = m.getAs[Map[Any, Any]]
@@ -67,7 +67,7 @@ class Collection( parent: Connection#Pointer, name: String ) extends IOConstants
 				}
 		}
 	
-	def filter( query: Connection#Cursor => Boolean ) = c.iterator filter query
+	def filter( query: Connection#Cursor => Boolean ) = c.arrayIterator filter query
 	
 	def find( cursor: Iterator[Connection#Cursor] ) =
 		if (check) {

@@ -28,8 +28,9 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 	
 	if (io.size == 0) {
 		version = VERSION
-		io putByteString s"BittyDB $version"
-			
+		io putByteString "BittyDB"
+		io putByteString version
+		
 		for (opt <- options)
 			opt match {
 				case ("charset", cs: String) => io.charset = Charset.forName( cs )
@@ -53,10 +54,13 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 	}
 	else
 		io.getByteString match {
-			case Some( s ) if s startsWith "BittyDB " =>
+			case Some( s ) if s == "BittyDB" =>
 				log( s )
 				
-				version = s substring 8
+				io.getByteString match {
+					case Some( v ) => version = v
+					case _ => invalid
+				}
 				
 				if (version > VERSION)
 					sys.error( "attempting to read database of newer format version" )
@@ -80,7 +84,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 	private def invalid = sys.error( "invalid database" )
 	
 	val root = new DBFilePointer( _root )
-	
+
 	def close = io.close
 
 	//
@@ -89,9 +93,79 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 	def get( key: String ): Option[Collection] = root.key( key ) map (_.collection( key ))
 	
 	def iterator: Iterator[(String, Collection)] = null
-// 		new AbstractIterator[Collection] {
-// 			
+// 		io.getType( addr ) match {
+// 			case NIL => Iterator.empty
+// 			case ELEMENTS =>
+// 				val header = io.pos
+// 				val first = io.getBig match {
+// 					case NUL => header + 2*io.bwidth
+// 					case p => p
+// 				}
+// 				
+// 				new AbstractIterator[(String, Collection)] {
+// 					var cont: Long = _
+// 					var chunksize: Long = _
+// 					var cur: Long = _
+// 					var scan = false
+// 					var done = false
+// 					
+// 					chunk( first )
+// 					
+// 					private def chunk( p: Long ) {
+// 						cont = io.getBig( p )
+// 						chunksize = io.getBig
+// 						cur = p + 2*io.bwidth
+// 					}
+// 					
+// 					def hasNext = {
+// 						def advance = {
+// 							chunksize -= EWIDTH
+// 							
+// 							if (chunksize == 0)
+// 								if (cont == NUL) {
+// 									done = true
+// 									false
+// 								} else {
+// 									chunk( cont )
+// 									true
+// 								}
+// 							else {
+// 								cur += EWIDTH
+// 								true
+// 							}
+// 						}
+// 
+// 						def nextused: Boolean =
+// 							if (advance)
+// 								if (io.getByte( cur ) == USED)
+// 									true
+// 								else
+// 									nextused
+// 							else
+// 								false
+// 						
+// 						if (done)
+// 							false
+// 						else if (scan)
+// 							if (nextused) {
+// 								scan = false
+// 								true
+// 							} else
+// 								false
+// 						else
+// 							true
+// 					}
+// 					
+// 					def next =
+// 						if (hasNext) {
+// 							scan = true
+// 							new Cursor( cur )
+// 						} else
+// 							throw new java.util.NoSuchElementException( "next on empty arrayIterator" )
+// 				}
+// 			case _ => sys.error( "can only use 'arrayIterator' for an array" )
 // 		}
+// 	}
 
 	def += (kv: (String, Collection)) = sys.error( "use 'set'" )
 	
@@ -368,11 +442,11 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 		
 		def membersAs[A] = members.asInstanceOf[Iterator[A]]
 		
-		def members = iterator map (_.get)
+		def members = arrayIterator map (_.get)
 		
-		def at( index: Int ) = iterator drop (index) next
+		def at( index: Int ) = arrayIterator drop (index) next
 		
-		def iterator = {
+		def arrayIterator = {
 			io.getType( addr ) match {
 				case NIL => Iterator.empty
 				case ELEMENTS =>
@@ -441,9 +515,9 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 								scan = true
 								new Cursor( cur )
 							} else
-								throw new java.util.NoSuchElementException( "next on empty iterator" )
+								throw new java.util.NoSuchElementException( "next on empty arrayIterator" )
 					}
-				case _ => sys.error( "can only use 'iterator' for an array" )
+				case _ => sys.error( "can only use 'arrayIterator' for an array" )
 			}
 		}
 		
