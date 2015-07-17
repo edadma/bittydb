@@ -5,6 +5,7 @@ import java.nio.charset.Charset
 
 import util.Either
 import collection.{TraversableOnce, AbstractIterator, Map => CMap}
+import collection.mutable.AbstractMap
 
 import ca.hyperreal.lia.Math
 
@@ -18,7 +19,7 @@ object Connection
 	def mem( options: (String, Any)* ) = new Connection( new MemIO, options )
 }
 
-class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) extends IOConstants
+class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) extends AbstractMap[String, Collection] with IOConstants
 {
 	private [bittydb] var version: String = _
 	private [bittydb] var freeListPtr: Long = _
@@ -78,11 +79,28 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 	
 	private def invalid = sys.error( "invalid database" )
 	
-	def apply( name: String ) = new Collection( root, name )
-	
 	val root = new DBFilePointer( _root )
 	
 	def close = io.close
+
+	//
+	// Map methods
+	//
+	def get( key: String ): Option[Collection] = root.key( key ) map (_.collection( key ))
+	
+	def iterator: Iterator[(String, Collection)] = null
+// 		new AbstractIterator[Collection] {
+// 			
+// 		}
+
+	def += (kv: (String, Collection)) = sys.error( "use 'set'" )
+	
+	def -= (key: String) = {
+		remove( key )
+		this
+	}
+	
+	override def default( name: String ) = new Collection( root, name )
 	
 	override def toString = "connection to " + io
 	
