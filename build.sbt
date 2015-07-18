@@ -43,6 +43,8 @@ jarName in assembly := name.value + "-" + version.value + ".jar"
 
 seq(bintraySettings:_*)
 
+isSnapshot := true
+
 publishMavenStyle := true
 
 publishArtifact in Test := false

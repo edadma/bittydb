@@ -2,6 +2,7 @@ package ca.hyperreal.bittydb
 
 import java.io.File
 import java.nio.charset.Charset
+import java.util.NoSuchElementException
 
 import util.Either
 import collection.{TraversableOnce, AbstractIterator, Map => CMap}
@@ -85,87 +86,17 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 	
 	val root = new DBFilePointer( _root )
 
+//	def apply( name: String ) = new Collection( root, name )
+	
 	def close = io.close
 
 	//
 	// Map methods
 	//
-	def get( key: String ): Option[Collection] = root.key( key ) map (_.collection( key ))
 	
-	def iterator: Iterator[(String, Collection)] = null
-// 		io.getType( addr ) match {
-// 			case NIL => Iterator.empty
-// 			case ELEMENTS =>
-// 				val header = io.pos
-// 				val first = io.getBig match {
-// 					case NUL => header + 2*io.bwidth
-// 					case p => p
-// 				}
-// 				
-// 				new AbstractIterator[(String, Collection)] {
-// 					var cont: Long = _
-// 					var chunksize: Long = _
-// 					var cur: Long = _
-// 					var scan = false
-// 					var done = false
-// 					
-// 					chunk( first )
-// 					
-// 					private def chunk( p: Long ) {
-// 						cont = io.getBig( p )
-// 						chunksize = io.getBig
-// 						cur = p + 2*io.bwidth
-// 					}
-// 					
-// 					def hasNext = {
-// 						def advance = {
-// 							chunksize -= EWIDTH
-// 							
-// 							if (chunksize == 0)
-// 								if (cont == NUL) {
-// 									done = true
-// 									false
-// 								} else {
-// 									chunk( cont )
-// 									true
-// 								}
-// 							else {
-// 								cur += EWIDTH
-// 								true
-// 							}
-// 						}
-// 
-// 						def nextused: Boolean =
-// 							if (advance)
-// 								if (io.getByte( cur ) == USED)
-// 									true
-// 								else
-// 									nextused
-// 							else
-// 								false
-// 						
-// 						if (done)
-// 							false
-// 						else if (scan)
-// 							if (nextused) {
-// 								scan = false
-// 								true
-// 							} else
-// 								false
-// 						else
-// 							true
-// 					}
-// 					
-// 					def next =
-// 						if (hasNext) {
-// 							scan = true
-// 							new Cursor( cur )
-// 						} else
-// 							throw new java.util.NoSuchElementException( "next on empty arrayIterator" )
-// 				}
-// 			case _ => sys.error( "can only use 'arrayIterator' for an array" )
-// 		}
-// 	}
+	def get( key: String ): Option[Collection] = if (root.key( key ) == None) None else Some( default(key) )
+	
+	def iterator: Iterator[(String, Collection)] = objectIterator( root )
 
 	def += (kv: (String, Collection)) = sys.error( "use 'set'" )
 	
@@ -175,6 +106,78 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 	}
 	
 	override def default( name: String ) = new Collection( root, name )
+	
+	def objectIterator( obj: Pointer ): Iterator[(String, Collection)] =
+		io.getType( obj.addr ) match {
+			case EMPTY => Iterator.empty
+			case MEMBERS =>
+				val header = io.pos
+				
+				new AbstractIterator[(String, Collection)] {
+					var cont: Long = _
+					var chunksize: Long = _
+					var cur: Long = _
+					var scan = false
+					var done = false
+					
+					chunk( header )
+					
+					private def chunk( p: Long ) {
+						cont = io.getBig( p )
+						chunksize = io.getBig
+						cur = io.pos
+					}
+					
+					def hasNext = {
+						def advance = {
+							chunksize -= PWIDTH
+							
+							if (chunksize == 0)
+								if (cont == NUL) {
+									done = true
+									false
+								} else {
+									chunk( cont )
+									true
+								}
+							else {
+								cur += PWIDTH
+								true
+							}
+						}
+
+						def nextused: Boolean =
+							if (advance)
+								if (io.getByte( cur ) == USED)
+									true
+								else
+									nextused
+							else
+								false
+						
+						if (done)
+							false
+						else if (scan)
+							if (nextused) {
+								scan = false
+								true
+							} else
+								false
+						else
+							true
+					}
+					
+					def next =
+						if (hasNext) {
+							val name = io.getValue( cur + 1 ).asInstanceOf[String]
+							
+							scan = true
+							name -> new Collection( obj, name )
+						} else
+							throw new NoSuchElementException( "next on empty objectIterator" )
+				}
+			case _ => sys.error( "can only use 'objectIterator' for an object" )
+		}
 	
 	override def toString = "connection to " + io
 	
@@ -188,10 +191,10 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 				super.get
 	}
 	
-	class DBFilePointer( protected val addr: Long ) extends Pointer
+	class DBFilePointer( private [bittydb] val addr: Long ) extends Pointer
 	
 	abstract class Pointer extends (Any => Pointer) {
-		protected def addr: Long
+		private [bittydb] def addr: Long
 		
 		def collection( name: String ) = new Collection( this, name )
 		
@@ -515,7 +518,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 								scan = true
 								new Cursor( cur )
 							} else
-								throw new java.util.NoSuchElementException( "next on empty arrayIterator" )
+								throw new NoSuchElementException( "next on empty arrayIterator" )
 					}
 				case _ => sys.error( "can only use 'arrayIterator' for an array" )
 			}

@@ -43,7 +43,8 @@ class Collection( parent: Connection#Pointer, name: String ) extends IOConstants
 			c = parent( name )
 		}
 	
-	def filter( query: Map[_, _] ) =
+	def filter( query: Map[_, _] ) = {
+		check
 		c.arrayIterator filter {
 			m =>
 				(m.kind&0xF0) == OBJECT && {
@@ -66,8 +67,12 @@ class Collection( parent: Connection#Pointer, name: String ) extends IOConstants
 					}
 				}
 		}
+	}
 	
-	def filter( query: Connection#Cursor => Boolean ) = c.arrayIterator filter query
+	def filter( query: Connection#Cursor => Boolean ) = {
+		check
+		c.arrayIterator filter query
+	}
 	
 	def find( cursor: Iterator[Connection#Cursor] ) =
 		if (check) {
@@ -119,7 +124,7 @@ class Collection( parent: Connection#Pointer, name: String ) extends IOConstants
 			0
 	
 	def update( query: Connection#Cursor => Boolean, updates: (String, Any)* ): Int =
-		update( filter (query), updates map {case (field, update) => SetUpdateOperator( field, update )} )
+		if (check) update( filter (query), updates map {case (field, update) => SetUpdateOperator( field, update )} ) else 0
 	
 	def update( query: Document, updates: Any ): Int = {
 		val ops = new ListBuffer[UpdateOperator]
@@ -138,7 +143,7 @@ class Collection( parent: Connection#Pointer, name: String ) extends IOConstants
 			case _ => ops += DocumentUpdateOperator( updates )
 		}
 		
-		update( filter (query), ops )
+		if (check) update( filter (query), ops ) else 0
 	}
 	
 	def insert( documents: Document* ) {
@@ -147,6 +152,8 @@ class Collection( parent: Connection#Pointer, name: String ) extends IOConstants
 		for (d <- documents.asInstanceOf[Seq[Map[Any, Any]]])
 			c.append( if (d contains "_id") d else d + ("_id" -> randomUUID) )
 	}
+	
+	override def toString = "collection " + name
 	
 	abstract class UpdateOperator
 	case class DocumentUpdateOperator( value: Any ) extends UpdateOperator
