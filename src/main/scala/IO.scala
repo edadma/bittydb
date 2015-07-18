@@ -102,7 +102,7 @@ abstract class IO extends IOConstants
 		putBig( l )
 	}
 	
-	def addBig( a: Int ) {
+	def addBig( a: Long ) {
 		val cur = pos
 		val v = getBig
 		
@@ -110,7 +110,7 @@ abstract class IO extends IOConstants
 		putBig( v + a )
 	}
 	
-	def addBig( addr: Long, a: Int ) {
+	def addBig( addr: Long, a: Long ) {
 		pos = addr
 		addBig( a )
 	}
@@ -492,7 +492,9 @@ abstract class IO extends IOConstants
 			}
 		}
 
-		getBig match {
+		skipBig						// skip count
+		
+		getBig match {				// set pos to first chunk
 			case NUL => skipBig
 			case f => pos = f
 		}
@@ -502,24 +504,30 @@ abstract class IO extends IOConstants
 	}
 	
 	def putArray( s: collection.TraversableOnce[Any] ) {
+		val cur = pos
+		
+		padBig	// length
 		padBig	// first chunk pointer
 		padBig	// last chunk pointer
-		putArrayChunk( s )
+		putArrayChunk( s, this, cur )
 	}
 	
-	def putArrayChunk( s: collection.TraversableOnce[Any], contptr: Long = NUL ) {
+	def putArrayChunk( s: collection.TraversableOnce[Any], lengthio: IO, lengthptr: Long, contptr: Long = NUL ) {
 		putBig( contptr )	// continuation pointer
 		
 		val start = pos
-	
+		var count = 0L
+		
 		padBig	// size of object in bytes
 		
 		for (e <- s) {
 			putByte( USED )
 			putValue( e )
+			count += 1
 		}
 	
 		putBig( start, pos - start - bwidth )
+		lengthio.addBig( lengthptr, count )
 	}
 
 	//

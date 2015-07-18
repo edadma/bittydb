@@ -323,8 +323,10 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 		private [bittydb] def ending =
 			io.getType( addr ) match {
 				case t@(MEMBERS|ELEMENTS) =>
-					if (t == ELEMENTS)
+					if (t == ELEMENTS) {
 						io.skipBig
+						io.skipBig
+					}
 					
 					io.getBig match {
 						case NUL =>
@@ -383,6 +385,8 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 				case NIL => io.putValue( addr, s )
 				case ELEMENTS =>
 					val header = io.pos
+
+					io.skipBig
 					
 					if (ending) {
 						io.skipBig
@@ -391,7 +395,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 						
 						io.append
 						
-						var count = 0
+						var count = 0L
 						
 						for (e <- s) {
 							io.putElement( e )
@@ -399,16 +403,17 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 						}
 						
 						io.addBig( sizeptr, count*EWIDTH )
+						io.addBig( header, count )
 					} else {
 						io.inert {
-							if (io.getBig( header ) == NUL)
-								io.putBig( header, header + 2*io.bwidth )
+							if (io.getBig( header + io.bwidth ) == NUL)
+								io.putBig( header + io.bwidth, header + 3*io.bwidth )
 						}
 						
 						val cont = io.allocComposite
 						
-						cont.backpatch( io, header + io.bwidth )
-						cont.putArrayChunk( s )
+						cont.backpatch( io, header + 2*io.bwidth )
+						cont.putArrayChunk( s, io, header )
 					}
 				case _ => sys.error( "can only use 'append' for an array" )
 			}
@@ -424,24 +429,33 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 				case ELEMENTS =>
 					val header = io.pos
 					
+					io.skipBig
+					
 					val first = io.getBig match {
-						case NUL => header + 2*io.bwidth
+						case NUL => header + 3*io.bwidth
 						case p => p
 					}
 					
 					if (io.getBig == NUL)
-						io.putBig( io.pos - io.bwidth, header + 2*io.bwidth )
+						io.putBig( io.pos - io.bwidth, header + 3*io.bwidth )
 						
-					io.pos = header
+					io.pos = header + io.bwidth
 					
 					val cont = io.allocComposite
 					
-					cont.putArrayChunk( s, first )
+					cont.putArrayChunk( s, io, header, first )
 				case _ => sys.error( "can only use 'prepend' for an array" )
 			}
 			
 			io.finish
 		}
+		
+		def length =
+			io.getType( addr ) match {
+				case NIL => 0L
+				case ELEMENTS => io.getBig
+				case _ => sys.error( "can only use 'length' for an array" )
+			}
 		
 		def membersAs[A] = members.asInstanceOf[Iterator[A]]
 		
@@ -454,6 +468,9 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 				case NIL => Iterator.empty
 				case ELEMENTS =>
 					val header = io.pos
+					
+					io.skipBig
+					
 					val first = io.getBig match {
 						case NUL => header + 2*io.bwidth
 						case p => p
