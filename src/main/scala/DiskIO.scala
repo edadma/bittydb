@@ -11,6 +11,14 @@ class DiskIO( f: File ) extends IO
 	
 	def force = file.getChannel.force( true )
 	
+	def readLock( addr: Long ) = todo
+	
+	def writeLock( addr: Long ) = todo
+	
+	def readUnlock( addr: Long ) = todo
+	
+	def writeUnlock( addr: Long ) = todo
+	
 	def size: Long = file.length
 	
 	def size_=( l: Long ) = file.setLength( l )

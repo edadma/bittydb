@@ -26,6 +26,10 @@ abstract class IO extends IOConstants
 	
 	def force
 	
+	def readLock( addr: Long )
+	
+	def writeLock( addr: Long )
+	
 	def size: Long
 	
 	def size_=( l: Long )
@@ -618,6 +622,8 @@ abstract class IO extends IOConstants
 		
 		pos = cur
 	}
+	
+	def todo = sys.error( "not implemented" )
 	
 	//
 	// allocation

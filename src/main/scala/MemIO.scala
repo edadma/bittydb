@@ -1,13 +1,38 @@
 package ca.hyperreal.bittydb
 
+import java.util.concurrent.locks.ReentrantReadWriteLock
+
+import collection.concurrent.TrieMap
+
 
 class MemIO extends IO
 {
 	private [bittydb] lazy val db = new ExpandableByteBuffer
+	private [bittydb] val locks = new TrieMap[Long, ReentrantReadWriteLock]
+	
+	def lock( addr: Long ) =
+		locks get addr match {
+			case Some( l ) => l
+			case None =>
+				val nl = new ReentrantReadWriteLock
+				
+				locks.putIfAbsent( addr, nl ) match {
+					case Some( l ) => l
+					case None => nl
+				}
+		}
 	
 	def close {}
 	
 	def force {}
+	
+	def readLock( addr: Long ) = lock( addr ).readLock.lock
+	
+	def writeLock( addr: Long ) = lock( addr ).writeLock.lock
+	
+	def readUnlock( addr: Long ) = lock( addr ).readLock.unlock
+	
+	def writeUnlock( addr: Long ) = lock( addr ).writeLock.unlock
 	
 	def size: Long = db.size
 	

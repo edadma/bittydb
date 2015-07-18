@@ -3,7 +3,7 @@ BittyDB
 
 BittyDB is a small embeddable database engine for the JVM for storing documents (i.e. JSON-like objects).  The implementation is in Scala, however, this project will aim to be very Java friendly as well.
 
-This project is under active development and a release has not yet been made.
+This project is under active development and a release has not yet been made.  The currently available version is just a snapshot.
 
 
 Example
@@ -53,6 +53,28 @@ The above example should output something very similar (the UUID's will be diffe
 BittyDB is distributed under the MIT License, meaning that you are free to use it in your free or proprietary software.
 
 
+## Usage
+
+Use the following elements to use BittyDB in your Maven project:
+
+	<repository>
+		<id>hyperreal</id>
+		<url>https://dl.bintray.com/edadma/maven</url>
+	</repository>
+
+	<dependency>
+		<groupId>ca.hyperreal</groupId>
+		<artifactId>bittydb</artifactId>
+		<version>0.1</version>
+	</dependency>
+
+Add the following to your `build.sbt` file to use BittyDB in your SBT project:
+
+	resolvers += "Hyperreal Repository" at "https://dl.bintray.com/edadma/maven"
+
+	libraryDependencies += "ca.hyperreal" %% "bittydb" % "0.1"
+
+	
 ## Building
 
 ### Requirements
@@ -64,8 +86,4 @@ BittyDB is distributed under the MIT License, meaning that you are free to use i
 
 	git clone git://github.com/edadma/bittydb.git
 	cd bittydb
-	sbt publishLocal
-	
-Add the following to your `build.sbt`
-	
-	libraryDependencies += "ca.hyperreal" %% "bittydb" % "0.1"
+	sbt test
