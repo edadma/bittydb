@@ -5,7 +5,7 @@ import ca.hyperreal.lia.Math
 
 object Main extends App
 {
-	val db = Connection.mem( "charset" -> "GB18030" )
+	val db = Connection.mem( 'charset -> "GB18030" )
 
 	db.root.set( "test" -> List(Map("a" -> 1, "b" -> "first"), Map("a" -> 2, "b" -> "second"), Map("a" -> 3, "b" -> "third")) )
 	println( db.root.get )

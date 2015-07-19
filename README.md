@@ -17,7 +17,7 @@ Here is a simple example demonstrating database insertion, querying and deletion
 	{
 	  // open a connection to an in-memory database using 'GB 18030',
 	  //   the Chinese government standard character encoding (UTF-8 is the default)
-	  val db = Connection.mem( "charset" -> "GB18030" )
+	  val db = Connection.mem( 'charset -> "GB18030" )
 	
 	  // insert some documents into a collection named 'test',
 	  //   which is created since it doesn't exist at this point,

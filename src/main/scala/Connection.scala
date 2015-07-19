@@ -6,21 +6,21 @@ import java.util.NoSuchElementException
 
 import util.Either
 import collection.{TraversableOnce, AbstractIterator, Map => CMap}
-import collection.mutable.AbstractMap
+import collection.mutable.{HashMap, AbstractMap}
 
 import ca.hyperreal.lia.Math
 
 
 object Connection
 {
-	def disk( file: String, options: (String, Any)* ): Connection = disk( new File(file), options: _* )
+	def disk( file: String, options: (Symbol, Any)* ): Connection = disk( new File(file), options: _* )
 	
-	def disk( f: File, options: (String, Any)* ) = new Connection( new DiskIO(f), options )
+	def disk( f: File, options: (Symbol, Any)* ) = new Connection( new DiskIO(f), options )
 	
-	def mem( options: (String, Any)* ) = new Connection( new MemIO, options )
+	def mem( options: (Symbol, Any)* ) = new Connection( new MemIO, options )
 }
 
-class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) extends AbstractMap[String, Collection] with IOConstants
+class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) extends AbstractMap[String, Collection] with IOConstants
 {
 	private [bittydb] var version: String = _
 	private [bittydb] var freeListPtr: Long = _
@@ -32,18 +32,35 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 		io putByteString "BittyDB"
 		io putByteString version
 		
-		for (opt <- options)
-			opt match {
-				case ("charset", cs: String) => io.charset = Charset.forName( cs )
-				case ("bwidth", n: Int) =>
+		val optMap = HashMap[Symbol, Any]( options: _* )
+		
+		for (opt <- Seq('charset, 'bwidth, 'cwidth) if optMap contains opt) {
+			(opt, optMap(opt)) match {
+				case ('charset, cs: String) =>
+					io.charset = Charset.forName( cs )
+				case ('bwidth, n: Int) =>
 					if (1 <= n && n <= 8)
 						io.bwidth = n
 					else
-						sys.error( "'bwidth' option is between 1 and 8 (inclusive)" )
+						sys.error( "'bwidth' is between 1 and 8 (inclusive)" )
+				case ('cwidth, n: Int) =>
+					if (io.bwidth <= n && n <= 255)
+						io.cwidth = n
+					else
+						sys.error( "'cwidth' is at between 'bwidth' and 255 (inclusive)" )
 			}
+			
+			optMap -= opt
+		}
 
+		optMap.keys.headOption match {
+			case None =>
+			case Some( k ) => sys.error( s"invalid option: '$k'" )
+		}
+		
 		io putByteString io.charset.name
 		io putByte io.bwidth
+		io putByte io.cwidth
 		
 		freeListPtr = io.pos
 		freeList = 0
@@ -73,6 +90,11 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 				
 				io.getByte match {
 					case n if 1 <= n && n <= 8 => io.bwidth = n
+					case _ => invalid
+				}
+				
+				io.getUnsignedByte match {
+					case n if io.bwidth <= n && n <= 255 => io.cwidth = n
 					case _ => invalid
 				}
 				
@@ -215,7 +237,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 					
 					def hasNext = {
 						def advance = {
-							chunksize -= PWIDTH
+							chunksize -= io.pwidth
 							
 							if (chunksize == 0)
 								if (cont == NUL) {
@@ -226,7 +248,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 									true
 								}
 							else {
-								cur += PWIDTH
+								cur += io.pwidth
 								true
 							}
 						}
@@ -321,7 +343,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 				case MEMBERS =>
 					lookup( k ) match {
 						case Left( _ ) => None
-						case Right( at ) => Some( new DBFilePointer(at + 1 + VWIDTH) )
+						case Right( at ) => Some( new DBFilePointer(at + 1 + io.vwidth) )
 					}
 				case _ => None
 			}
@@ -360,7 +382,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 						case Left( None ) =>
 							if (ending) {
 								io.skipBig
-								io.addBig( PWIDTH )
+								io.addBig( io.pwidth )
 								io.append
 								io.putPair( kv )
 							} else {
@@ -408,7 +430,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 							count += 1
 						}
 						
-						io.addBig( sizeptr, count*EWIDTH )
+						io.addBig( sizeptr, count*io.ewidth )
 						io.addBig( header, count )
 					} else {
 						io.inert {
@@ -499,7 +521,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 						
 						def hasNext = {
 							def advance = {
-								chunksize -= EWIDTH
+								chunksize -= io.ewidth
 								
 								if (chunksize == 0)
 									if (cont == NUL) {
@@ -510,7 +532,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 										true
 									}
 								else {
-									cur += EWIDTH
+									cur += io.ewidth
 									true
 								}
 							}

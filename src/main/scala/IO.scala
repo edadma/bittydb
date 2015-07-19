@@ -12,9 +12,11 @@ abstract class IO extends IOConstants
 {
 	private [bittydb] var charset: Charset = UTF_8
 	private [bittydb] var bwidth = 5					// big (i.e. pointers, sizes) width (2 minimum)
-	private [bittydb] var kwidth = 8					// key width
-	private [bittydb] var vwidth = 8					// value width
-	private [bittydb] var ewidth = 8					// element width
+	private [bittydb] var cwidth = 8					// cell width
+	
+	private [bittydb] val vwidth = 1 + cwidth			// value width
+	private [bittydb] val pwidth = 1 + 2*vwidth 	// pair width
+	private [bittydb] val ewidth = 1 + vwidth
 	
 	//
 	// abstract methods
@@ -288,7 +290,7 @@ abstract class IO extends IOConstants
 				case ELEMENTS => getArray
 			}
 	
-		pos = cur + VWIDTH
+		pos = cur + vwidth
 		res
 	}
 	
@@ -353,7 +355,7 @@ abstract class IO extends IOConstants
 				val cur = pos
 			
 				putString( a )
-				pad( VWIDTH - (pos - cur) )
+				pad( vwidth - (pos - cur) )
 			case a: collection.Map[_, _] if a isEmpty =>
 				putByte( EMPTY )
 				pad( 8 )
@@ -391,7 +393,7 @@ abstract class IO extends IOConstants
 	def putString( a: String ) {
 		val s = encode( a )
 		val io =
-			if (s.length > VWIDTH - 1) {
+			if (s.length > vwidth - 1) {
 				putByte( POINTER )
 				allocPrimitive
 			} else

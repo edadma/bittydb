@@ -45,6 +45,7 @@ identifier     | `0x07 BittyDB`   |         | 8 byte (64 bit) "magic number" equ
 version        | <n> <version>    |         | format version: *n* is the number of bytes in the *version* number string
 charset        | <n> <charset>    | `UTF-8` | character set for strings: *n* is the number of bytes in the *charset* name string
 bwidth         | <n>              | `0x05`  | *n* is the width of "big" numbers in the database which are used for file pointers and chunk sizes
+cwidth         | <n>              | `0x08`  | *n* is the width of cells in the database which are the basic data "containers"
 
 The header is followed immediately by the *root* object.  All other values in the database can have any type, but the root must be an object.
 
