@@ -30,6 +30,10 @@ abstract class IO extends IOConstants
 	
 	def writeLock( addr: Long )
 	
+	def readUnlock( addr: Long )
+	
+	def writeUnlock( addr: Long )
+	
 	def size: Long
 	
 	def size_=( l: Long )

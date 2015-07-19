@@ -96,8 +96,14 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 	
 	def get( key: String ): Option[Collection] = if (root.key( key ) == None) None else Some( default(key) )
 	
-	def iterator: Iterator[(String, Collection)] = objectIterator( root )
-
+	def iterator: Iterator[(String, Collection)] =
+		root.objectIterator map {
+			a =>
+				val name = io.getValue( a + 1 ).asInstanceOf[String]
+				
+				name -> new Collection( root, name )
+		}
+	
 	def += (kv: (String, Collection)) = sys.error( "use 'set'" )
 	
 	def -= (key: String) = {
@@ -106,78 +112,6 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 	}
 	
 	override def default( name: String ) = new Collection( root, name )
-	
-	def objectIterator( obj: Pointer ): Iterator[(String, Collection)] =
-		io.getType( obj.addr ) match {
-			case EMPTY => Iterator.empty
-			case MEMBERS =>
-				val header = io.pos
-				
-				new AbstractIterator[(String, Collection)] {
-					var cont: Long = _
-					var chunksize: Long = _
-					var cur: Long = _
-					var scan = false
-					var done = false
-					
-					chunk( header )
-					
-					private def chunk( p: Long ) {
-						cont = io.getBig( p )
-						chunksize = io.getBig
-						cur = io.pos
-					}
-					
-					def hasNext = {
-						def advance = {
-							chunksize -= PWIDTH
-							
-							if (chunksize == 0)
-								if (cont == NUL) {
-									done = true
-									false
-								} else {
-									chunk( cont )
-									true
-								}
-							else {
-								cur += PWIDTH
-								true
-							}
-						}
-
-						def nextused: Boolean =
-							if (advance)
-								if (io.getByte( cur ) == USED)
-									true
-								else
-									nextused
-							else
-								false
-						
-						if (done)
-							false
-						else if (scan)
-							if (nextused) {
-								scan = false
-								true
-							} else
-								false
-						else
-							true
-					}
-					
-					def next =
-						if (hasNext) {
-							val name = io.getValue( cur + 1 ).asInstanceOf[String]
-							
-							scan = true
-							name -> new Collection( obj, name )
-						} else
-							throw new NoSuchElementException( "next on empty objectIterator" )
-				}
-			case _ => sys.error( "can only use 'objectIterator' for an object" )
-		}
 	
 	override def toString = "connection to " + io
 	
@@ -254,6 +188,78 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 			}
 			
 			io.finish
+		}
+	
+	def list = objectIterator map {a => io.getValue( a + 1 ) -> new DBFilePointer( io.pos )} toList
+	
+	def objectIterator: Iterator[Long] =
+		io.getType( addr ) match {
+			case EMPTY => Iterator.empty
+			case MEMBERS =>
+				val header = io.pos
+				
+				new AbstractIterator[Long] {
+					var cont: Long = _
+					var chunksize: Long = _
+					var cur: Long = _
+					var scan = false
+					var done = false
+					
+					chunk( header + io.bwidth )
+					
+					private def chunk( p: Long ) {
+						cont = io.getBig( p )
+						chunksize = io.getBig
+						cur = io.pos
+					}
+					
+					def hasNext = {
+						def advance = {
+							chunksize -= PWIDTH
+							
+							if (chunksize == 0)
+								if (cont == NUL) {
+									done = true
+									false
+								} else {
+									chunk( cont )
+									true
+								}
+							else {
+								cur += PWIDTH
+								true
+							}
+						}
+
+						def nextused: Boolean =
+							if (advance)
+								if (io.getByte( cur ) == USED)
+									true
+								else
+									nextused
+							else
+								false
+						
+						if (done)
+							false
+						else if (scan)
+							if (nextused) {
+								scan = false
+								true
+							} else
+								false
+						else
+							true
+					}
+					
+					def next =
+						if (hasNext) {
+							scan = true
+							cur
+						} else
+							throw new NoSuchElementException( "next on empty objectIterator" )
+				}
+			case _ => sys.error( "can only use 'objectIterator' for an object" )
 		}
 		
 		private [bittydb] def lookup( key: Any ): Either[Option[Long], Long] = {

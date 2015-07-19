@@ -87,7 +87,7 @@ class Tests extends FreeSpec with PropertyChecks with Matchers
 		db.root( "a" ).length shouldBe 2
 	}
 	
-	"iterator" in
+	"arrayIterator" in
 	{
 	val db = Connection.mem()
 	
@@ -103,5 +103,16 @@ class Tests extends FreeSpec with PropertyChecks with Matchers
 		db.root( "a" ).arrayIterator.drop(3).next.put( "happy" )
 		db.root( "a" ).get shouldBe List( 6, 3, 4, "happy", 2, 5 )
 		db.root( "a" ).members.toList shouldBe List( 6, 3, 4, "happy", 2, 5 )
+	}
+	
+	"list (objectIterator)" in
+	{
+	val db = Connection.mem()
+	
+		db.root.set( "asdfasdfasdf" -> List(1, 2, 3) )
+		db.root.set( "zxcvzxcvzxcv" -> List(4, 5, 6) )
+		db.root.set( "qwerqwerqwer" -> List(7, 8, 9) )
+		db.root.list map {case (k, v) => (k, v.get)} shouldBe List(
+			"asdfasdfasdf" -> List(1, 2, 3), "zxcvzxcvzxcv" -> List(4, 5, 6), "qwerqwerqwer" -> List(7, 8, 9) )
 	}
 }

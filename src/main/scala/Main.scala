@@ -5,20 +5,13 @@ import ca.hyperreal.lia.Math
 
 object Main extends App
 {
-// 	val db = Connection.mem( "charset" -> "GB18030" )
-// 
-// 	db.root.set( "test" -> List(Map("a" -> 1, "b" -> "first"), Map("a" -> 2, "b" -> "second"), Map("a" -> 3, "b" -> "third")) )
-// 	println( db.root.get )
-// 
-// 	val res = db( "test" ).update( Map("a" -> Map("$lt" -> 3)), Map("$set" -> Map("a" -> 123, "b" -> 456)) )
-// 
-// 	println( res )
-// 	println( db.root("test").get )
-	val db = Connection.mem()
-	
-		println( db.root.get )
-		
-		println( db.root.set( "a" -> List(1, 2, 3) ) )
-		db.io.dump
-		println( db.root.get )
+	val db = Connection.mem( "charset" -> "GB18030" )
+
+	db.root.set( "test" -> List(Map("a" -> 1, "b" -> "first"), Map("a" -> 2, "b" -> "second"), Map("a" -> 3, "b" -> "third")) )
+	println( db.root.get )
+
+	val res = db( "test" ).update( Map("a" -> Map("$lt" -> 3)), Map("$set" -> Map("a" -> 123, "b" -> 456)) )
+
+	println( res )
+	println( db.root("test").get )
 }
