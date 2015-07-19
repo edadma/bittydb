@@ -115,7 +115,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 	
 	override def toString = "connection to " + io
 	
-	class Cursor( elem: Long ) extends DBFilePointer( elem + 1 ) {
+	class Cursor( val elem: Long ) extends DBFilePointer( elem + 1 ) {
 		def remove = io.putByte( elem, UNUSED )
 		
 		override def get =
@@ -478,7 +478,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 					io.skipBig
 					
 					val first = io.getBig match {
-						case NUL => header + 2*io.bwidth
+						case NUL => header + 3*io.bwidth
 						case p => p
 					}
 					
@@ -494,7 +494,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(String, Any)] ) ex
 						private def chunk( p: Long ) {
 							cont = io.getBig( p )
 							chunksize = io.getBig
-							cur = p + 2*io.bwidth
+							cur = io.pos
 						}
 						
 						def hasNext = {

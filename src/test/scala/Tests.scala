@@ -94,15 +94,16 @@ class Tests extends FreeSpec with PropertyChecks with Matchers
 		db.root.set( "a" -> Nil )
 		db.root( "a" ).arrayIterator.isEmpty shouldBe true
 		
-		db.root( "a" ).prepend( 1, 2 )
-		db.root( "a" ).prepend( 3, 4 )
 		db.root( "a" ).append( 5 )
-		db.root( "a" ).prepend( 6 )
-		db.root( "a" ).get shouldBe List( 6, 3, 4, 1, 2, 5 )
+		db.root( "a" ).members.toList shouldBe List( 5 )
+		db.root( "a" ).prepend( 1, 2 )
+		db.root( "a" ).append( 3 )
+		db.root( "a" ).prepend( 4 )
+		db.root( "a" ).get shouldBe List( 4, 1, 2, 5, 3 )
 		
 		db.root( "a" ).arrayIterator.drop(3).next.put( "happy" )
-		db.root( "a" ).get shouldBe List( 6, 3, 4, "happy", 2, 5 )
-		db.root( "a" ).members.toList shouldBe List( 6, 3, 4, "happy", 2, 5 )
+		db.root( "a" ).get shouldBe List( 4, 1, 2, "happy", 3 )
+		db.root( "a" ).members.toList shouldBe List( 4, 1, 2, "happy", 3 )
 	}
 	
 	"list (objectIterator)" in

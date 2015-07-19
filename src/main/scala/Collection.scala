@@ -48,6 +48,7 @@ class Collection( parent: Connection#Pointer, name: String ) extends IOConstants
 		c.arrayIterator filter {
 			m =>
 				(m.kind&0xF0) == OBJECT && {
+					println( m.addr.toHexString )
 					val d = m.getAs[Map[Any, Any]]
 					
 					query forall {
