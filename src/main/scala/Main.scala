@@ -7,16 +7,11 @@ object Main extends App
 {
 	val db = Connection.mem( "charset" -> "GB18030" )
 
-		db.root.set( "a" -> Nil )
-		println( db.root( "a" ).arrayIterator.isEmpty )
-		
-// 		db.root( "a" ).prepend( 1, 2 )
-// 		db.root( "a" ).prepend( 3, 4 )
-		db.root( "a" ).append( 5 )
-//		db.root( "a" ).prepend( 6 )
-//		println( db.root( "a" ).get )
-		
-// 		db.root( "a" ).arrayIterator.drop(3).next.put( "happy" )
-// 		println( db.root( "a" ).get )
-		println( db.root( "a" ).members.toList )
+	db.root.set( "test" -> List(Map("a" -> 1, "b" -> "first"), Map("a" -> 2, "b" -> "second"), Map("a" -> 3, "b" -> "third")) )
+	println( db.root.get )
+
+	val res = db( "test" ).update( Map("a" -> Map("$lt" -> 3)), Map("$set" -> Map("a" -> 123, "b" -> 456)) )
+
+	println( res )
+	println( db.root("test").get )
 }
