@@ -14,9 +14,9 @@ abstract class IO extends IOConstants
 	private [bittydb] var bwidth = 5					// big (i.e. pointers, sizes) width (2 minimum)
 	private [bittydb] var cwidth = 8					// cell width
 	
-	private [bittydb] val vwidth = 1 + cwidth			// value width
-	private [bittydb] val pwidth = 1 + 2*vwidth 	// pair width
-	private [bittydb] val ewidth = 1 + vwidth
+	private [bittydb] lazy val vwidth = 1 + cwidth			// value width
+	private [bittydb] lazy val pwidth = 1 + 2*vwidth 	// pair width
+	private [bittydb] lazy val ewidth = 1 + vwidth
 	
 	//
 	// abstract methods
@@ -324,8 +324,8 @@ abstract class IO extends IOConstants
 			case a: Int =>
 				val (io, p) = need( 4 )
 				
-				putByte( INT )
-				putInt( a )
+				io.putByte( INT )
+				io.putInt( a )
 				pad( p )
 			case a: Long if a.isValidByte =>
 				putByte( BYTE )
@@ -334,26 +334,26 @@ abstract class IO extends IOConstants
 			case a: Long if a.isValidShort =>
 				val (io, p) = need( 2 )
 				
-				putByte( SHORT )
-				putShort( a.asInstanceOf[Int] )
+				io.putByte( SHORT )
+				io.putShort( a.asInstanceOf[Int] )
 				pad( p )
 			case a: Long if a.isValidInt =>
 				val (io, p) = need( 4 )
 				
-				putByte( INT )
-				putInt( a .asInstanceOf[Int])
+				io.putByte( INT )
+				io.putInt( a .asInstanceOf[Int] )
 				pad( p )
 			case a: Long =>
 				val (io, p) = need( 8 )
 				
-				putByte( LONG )
-				putLong( a )
+				io.putByte( LONG )
+				io.putLong( a )
 				pad( p )
 			case a: Instant =>
 				val (io, p) = need( 8 )
 				
-				putByte( TIMESTAMP )
-				putTimestamp( a )
+				io.putByte( TIMESTAMP )
+				io.putTimestamp( a )
 				pad( p )
 			case a: OffsetDateTime =>
 				val (io, p) = need( DATETIME_WIDTH )
@@ -370,14 +370,15 @@ abstract class IO extends IOConstants
 			case a: Double =>
 				val (io, p) = need( 8 )
 				
-				putByte( DOUBLE )
-				putDouble( a )
+				io.putByte( DOUBLE )
+				io.putDouble( a )
 				pad( p )
 			case a: String =>
 				val s = encode( a )
 				val (io, p) = need(
 					s.length match {
-						case l if l <= 16 => l
+						case 0 => 1
+						case l if l <= SSTRING_MAX => l
 						case l if l < 256 => l + 1
 						case l if l < 65536 => l + 2
 						case l => l + 4
@@ -485,7 +486,7 @@ abstract class IO extends IOConstants
 				}
 			}
 			
-			if (cont > 0) {
+			if (cont != NUL) {
 				pos = cont
 				chunk
 			}
@@ -658,7 +659,7 @@ abstract class IO extends IOConstants
 	
 //	def skipString = skip( getLen )
 	
-	def skipValue = skip( 9 )
+	def skipValue = skip( vwidth )
 	
 	def pad( n: Long ) =
 		for (_ <- 1L to n)
@@ -697,7 +698,7 @@ abstract class IO extends IOConstants
 	
 	def allocBasic = {
 		if (primitive eq null) {
-			primitive = new AllocIO( charset )
+			primitive = new AllocIO( charset, bwidth, cwidth )
 			allocs += primitive
 		} else
 			primitive
@@ -708,7 +709,7 @@ abstract class IO extends IOConstants
 	}
 	
 	def allocComposite = {
-		val res = new AllocIO( charset )
+		val res = new AllocIO( charset, bwidth, cwidth )
 		
 		allocs += res
 		res.backpatch( this, pos )

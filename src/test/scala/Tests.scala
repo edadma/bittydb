@@ -10,6 +10,11 @@ class Tests extends FreeSpec with PropertyChecks with Matchers
 	{
 	val db = Connection.mem()
 	
+		db.root.set( "test" -> List(Map("b" -> "first"), Map("b" -> "asdfasdfasdf")) )
+		db.root("test").get shouldBe List(Map("b" -> "first"), Map("b" -> "asdfasdfasdf"))
+
+		db = Connection.mem()
+	
 		db.root.get shouldBe Map()
 		
 		db.root.set( "a" -> List(1, 2, 3) ) shouldBe false
