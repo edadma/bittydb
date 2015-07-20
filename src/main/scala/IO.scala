@@ -307,65 +307,105 @@ abstract class IO extends IOConstants
 		v match {
 			case null =>
 				putByte( NULL )
-				pad( 8 )
+				pad( cwidth )
 			case b: Boolean =>
 				putBoolean( b )
-				pad( 8 )
+				pad( cwidth )
 			case a: Int if a.isValidByte =>
 				putByte( BYTE )
 				putByte( a )
-				pad( 7 )
+				pad( cwidth - 1 )
 			case a: Int if a.isValidShort =>
-				putByte( SHORT )
-				putShort( a )
-				pad( 6 )
+				val (io, p) = need( 2 )
+				
+				io.putByte( SHORT )
+				io.putShort( a )
+				pad( p )
 			case a: Int =>
+				val (io, p) = need( 4 )
+				
 				putByte( INT )
 				putInt( a )
-				pad( 4 )
+				pad( p )
 			case a: Long if a.isValidByte =>
 				putByte( BYTE )
 				putByte( a.asInstanceOf[Int] )
 				pad( 7 )
 			case a: Long if a.isValidShort =>
+				val (io, p) = need( 2 )
+				
 				putByte( SHORT )
 				putShort( a.asInstanceOf[Int] )
-				pad( 6 )
-			case a: Long if a.isValidInt=>
+				pad( p )
+			case a: Long if a.isValidInt =>
+				val (io, p) = need( 4 )
+				
 				putByte( INT )
 				putInt( a .asInstanceOf[Int])
-				pad( 4 )
+				pad( p )
 			case a: Long =>
+				val (io, p) = need( 8 )
+				
 				putByte( LONG )
 				putLong( a )
+				pad( p )
 			case a: Instant =>
+				val (io, p) = need( 8 )
+				
 				putByte( TIMESTAMP )
 				putTimestamp( a )
+				pad( p )
 			case a: OffsetDateTime =>
-				putByte( POINTER )
-	
-				val io = allocBasic
+				val (io, p) = need( DATETIME_WIDTH )
 				
 				io.putByte( DATETIME )
 				io.putDatetime( a )
+				pad( p )
 			case a: UUID =>
-				putByte( POINTER )
-	
-				val io = allocBasic
+				val (io, p) = need( 16 )
 				
 				io.putByte( UUID )
 				io.putUUID( a )
+				pad( p )
 			case a: Double =>
+				val (io, p) = need( 8 )
+				
 				putByte( DOUBLE )
 				putDouble( a )
+				pad( p )
 			case a: String =>
-				val cur = pos
-			
-				putString( a )
-				pad( vwidth - (pos - cur) )
+				val s = encode( a )
+				val (io, p) = need(
+					s.length match {
+						case l if l <= 16 => l
+						case l if l < 256 => l + 1
+						case l if l < 65536 => l + 2
+						case l => l + 4
+					} )
+				
+				if (s.isEmpty || s.length > SSTRING_MAX) {
+					s.length match {
+						case l if l < 256 =>
+							io.putByte( STRING|UBYTE_LENGTH )
+							io.putByte( l )
+						case l if l < 65536 => 
+							io.putByte( STRING|USHORT_LENGTH )
+							io.putShort( l )
+						case l =>
+							io.putByte( STRING|INT_LENGTH )
+							io.putInt( l )
+					}
+					
+					io.putBytes( s )
+				} else {
+					io.putByte( SSTRING|(s.length - 1) )
+					io.putBytes( s )
+				}
+				
+				pad( p )
 			case a: collection.Map[_, _] if a isEmpty =>
 				putByte( EMPTY )
-				pad( 8 )
+				pad( cwidth )
 			case a: collection.Map[_, _] =>
 				putByte( POINTER )
 		
@@ -375,7 +415,7 @@ abstract class IO extends IOConstants
 				io.putObject( a )
 			case a: collection.TraversableOnce[_] if a isEmpty =>
 				putByte( NIL )
-				pad( 8 )
+				pad( cwidth )
 			case a: collection.TraversableOnce[_] =>
 				putByte( POINTER )
 		
@@ -400,9 +440,11 @@ abstract class IO extends IOConstants
 	def putString( a: String ) {
 		val s = encode( a )
 		val io =
-			if (s.length > vwidth - 1) {
+			if (s.length > cwidth) {
 				putByte( POINTER )
-				allocBasic
+				val res = allocBasic
+				pad( bwidth )
+				res
 			} else
 				this
 		
@@ -624,7 +666,7 @@ abstract class IO extends IOConstants
 			
 	def padBig = pad( bwidth )
 	
-	def padValue = pad( 8 )
+	def padCell = pad( cwidth )
 	
 	def encode( s: String ) = s.getBytes( charset )
 	
@@ -634,6 +676,14 @@ abstract class IO extends IOConstants
 		action
 		
 		pos = cur
+	}
+	
+	def need( width: Int ) = {
+		if (width > cwidth) {
+			putByte( POINTER )
+			(allocBasic, cwidth)
+		} else
+			(this, cwidth - width)
 	}
 	
 	def todo = sys.error( "not implemented" )
@@ -649,12 +699,11 @@ abstract class IO extends IOConstants
 		if (primitive eq null) {
 			primitive = new AllocIO( charset )
 			allocs += primitive
-		}
-		else
+		} else
 			primitive
 		
 		primitive.backpatch( this, pos )
-		padValue
+//		padCell
 		primitive
 	}
 	
@@ -663,7 +712,7 @@ abstract class IO extends IOConstants
 		
 		allocs += res
 		res.backpatch( this, pos )
-		padValue
+		padCell
 		res
 	}
 	
