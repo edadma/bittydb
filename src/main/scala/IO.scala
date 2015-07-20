@@ -244,6 +244,15 @@ abstract class IO extends IOConstants
 		putLong( id.getLeastSignificantBits )
 	}
 	
+	def getBoolean =
+		getByte match {
+			case TRUE => true
+			case FALSE => false
+			case _ => sys.error( "invalid boolean value" )
+		}
+	
+	def putBoolean( a: Boolean ) = putByte( if (a) TRUE else FALSE )
+	
 	object Type1 {
 		def unapply( t: Int ): Option[(Int, Int)] = {
 			Some( t&0xF0, t&0x0F )
@@ -299,11 +308,8 @@ abstract class IO extends IOConstants
 			case null =>
 				putByte( NULL )
 				pad( 8 )
-			case false =>
-				putByte( FALSE )
-				pad( 8 )
-			case true =>
-				putByte( TRUE )
+			case b: Boolean =>
+				putBoolean( b )
 				pad( 8 )
 			case a: Int if a.isValidByte =>
 				putByte( BYTE )
@@ -338,13 +344,14 @@ abstract class IO extends IOConstants
 			case a: OffsetDateTime =>
 				putByte( POINTER )
 	
-				val io = allocPrimitive
+				val io = allocBasic
 				
+				io.putByte( DATETIME )
 				io.putDatetime( a )
 			case a: UUID =>
 				putByte( POINTER )
 	
-				val io = allocPrimitive
+				val io = allocBasic
 				
 				io.putByte( UUID )
 				io.putUUID( a )
@@ -395,7 +402,7 @@ abstract class IO extends IOConstants
 		val io =
 			if (s.length > vwidth - 1) {
 				putByte( POINTER )
-				allocPrimitive
+				allocBasic
 			} else
 				this
 		
@@ -638,7 +645,7 @@ abstract class IO extends IOConstants
 	private [bittydb] val allocs = new ListBuffer[AllocIO]
 	private [bittydb] var primitive: AllocIO = null
 	
-	def allocPrimitive = {
+	def allocBasic = {
 		if (primitive eq null) {
 			primitive = new AllocIO( charset )
 			allocs += primitive

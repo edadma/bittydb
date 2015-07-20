@@ -116,4 +116,30 @@ class Tests extends FreeSpec with PropertyChecks with Matchers
 		db.root.list map {case (k, v) => (k, v.get)} shouldBe List(
 			"asdfasdfasdf" -> List(1, 2, 3), "zxcvzxcvzxcv" -> List(4, 5, 6), "qwerqwerqwer" -> List(7, 8, 9) )
 	}
+	
+	"update (MongoDB style)" in
+	{
+	val db = Connection.mem()
+	
+		db.root.set( "test" -> List(Map("a" -> 1, "b" -> "first"), Map("a" -> 2, "b" -> "second"), Map("a" -> 3, "b" -> "third")) )
+		db( "test" ).update( Map("a" -> Map("$lt" -> 3)), Map("$set" -> Map("a" -> 123, "b" -> 456)) ) shouldBe 2
+		db.root("test").get shouldBe List(Map("a" -> 123, "b" -> 456), Map("a" -> 123, "b" -> 456), Map("a" -> 3, "b" -> "third"))
+	}
+	
+	"insert, find, remove, update (functional style)" in
+	{
+		val db = Connection.mem( 'charset -> "GB18030", 'uuid -> false )
+
+		db( "test" ).insert( Map("a" -> 1, "b" -> "first"), Map("a" -> 2, "b" -> "second"), Map("a" -> 3, "b" -> "third") )
+
+		db.root("test").get shouldBe List(Map("a" -> 1, "b" -> "first"), Map("a" -> 2, "b" -> "second"), Map("a" -> 3, "b" -> "third"))
+
+		(db( "test" ) find (_("a") < 3) toList) shouldBe List(Map("a" -> 1, "b" -> "first"), Map("a" -> 2, "b" -> "second"))
+
+		db( "test" ) remove (_("a") in Set(1, 2))
+		db.root("test").get shouldBe List(Map("a" -> 3, "b" -> "third"))
+
+		db( "test" ) update (_("a") === 3, "b" -> "第三")
+		db.root("test").get shouldBe List(Map("a" -> 3, "b" -> "第三"))
+	}
 }

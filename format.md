@@ -1,8 +1,8 @@
 BittyDB File Format
 ===================
 
-Types
------
+Internal Types
+--------------
 
 - NULL =			0x00
 - BOOLEAN =		0x10
@@ -35,6 +35,7 @@ Types
 - WITH_ENCODING = 4
 - SSTRING_MAX = 16
 
+Internal types can be divided into *composite* or *basic* depending on whether they are built out of other types or not.  The composite types are OBJECT and ARRAY.  All other types are basic, except for POINTER which is in a class by itself.  Some basic types are *simple* in the sense that they only require their type and no other value data to be stored.  The simple types are NULL, BOOLEAN (TRUE/FALSE), single character strings (SSTRING of one character), EMPTY, and NIL.
 
 Header
 ------
@@ -46,6 +47,7 @@ version        | <n> <version>    |         | format version: *n* is the number 
 charset        | <n> <charset>    | `UTF-8` | character set for strings: *n* is the number of bytes in the *charset* name string
 bwidth         | <n>              | `0x05`  | *n* is the width of "big" numbers in the database which are used for file pointers and chunk sizes
 cwidth         | <n>              | `0x08`  | *n* is the width of cells in the database which are the basic data "containers"
+uuidOption     | `0x10/0x11`      | `0x10`  | option as to whether "_id" fields should be added automatically during insertion (off by default)
 
 The header is followed immediately by the *root* object.  All other values in the database can have any type, but the root must be an object.
 

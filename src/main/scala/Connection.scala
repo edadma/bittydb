@@ -27,6 +27,8 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 	private [bittydb] var freeList: Long = _
 	private [bittydb] var _root: Long = _
 	
+	private [bittydb] var uuidOption = false
+	
 	if (io.size == 0) {
 		version = VERSION
 		io putByteString "BittyDB"
@@ -34,7 +36,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 		
 		val optMap = HashMap[Symbol, Any]( options: _* )
 		
-		for (opt <- Seq('charset, 'bwidth, 'cwidth) if optMap contains opt) {
+		for (opt <- Seq('charset, 'bwidth, 'cwidth, 'uuid) if optMap contains opt) {
 			(opt, optMap(opt)) match {
 				case ('charset, cs: String) =>
 					io.charset = Charset.forName( cs )
@@ -48,6 +50,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 						io.cwidth = n
 					else
 						sys.error( "'cwidth' is at between 'bwidth' and 255 (inclusive)" )
+				case ('uuid, on: Boolean) => uuidOption = on
 			}
 			
 			optMap -= opt
@@ -61,6 +64,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 		io putByteString io.charset.name
 		io putByte io.bwidth
 		io putByte io.cwidth
+		io putBoolean uuidOption
 		
 		freeListPtr = io.pos
 		freeList = 0
@@ -97,6 +101,8 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 					case n if io.bwidth <= n && n <= 255 => io.cwidth = n
 					case _ => invalid
 				}
+				
+				uuidOption = io.getBoolean
 				
 				freeListPtr = io.pos
 				freeList = io.getBig
@@ -151,6 +157,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 	
 	abstract class Pointer extends (Any => Pointer) {
 		private [bittydb] def addr: Long
+		private [bittydb] val connection = Connection.this
 		
 		def collection( name: String ) = new Collection( this, name )
 		
