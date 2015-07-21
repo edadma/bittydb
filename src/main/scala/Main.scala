@@ -7,7 +7,9 @@ object Main extends App
 {
 	val db = Connection.mem()
 	
-	db.root.set( "test" -> List(Map("b" -> "first"), Map("b" -> "asdfasdfa")) )
+//	db.root.set( "a" -> List(List(1), List("b")) )
+//	db.root.set( "a" -> List(1, "b") )
+	db.root.set( "a" -> 0x5A )
 	db.io.dump
-	println( db.root("test").get )
+	println( db.root("a").get )
 }

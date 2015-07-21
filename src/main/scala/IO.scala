@@ -10,13 +10,13 @@ import collection.mutable.{ListBuffer, HashMap}
 
 abstract class IO extends IOConstants
 {
-	private [bittydb] var charset: Charset = UTF_8
+	private [bittydb] var charset = UTF_8
 	private [bittydb] var bwidth = 5					// big (i.e. pointers, sizes) width (2 minimum)
 	private [bittydb] var cwidth = 8					// cell width
 	
-	private [bittydb] lazy val vwidth = 1 + cwidth			// value width
-	private [bittydb] lazy val pwidth = 1 + 2*vwidth 	// pair width
-	private [bittydb] lazy val ewidth = 1 + vwidth
+	private [bittydb] def vwidth = 1 + cwidth			// value width
+	private [bittydb] def pwidth = 1 + 2*vwidth 	// pair width
+	private [bittydb] def ewidth = 1 + vwidth
 	
 	//
 	// abstract methods
@@ -97,9 +97,14 @@ abstract class IO extends IOConstants
 		res
 	}
 	
+// 	def putBig( l: Long ) {
+// 		putByte( (l>>32).asInstanceOf[Int] )
+// 		putInt( l.asInstanceOf[Int] )
+// 	}
+
 	def putBig( l: Long ) {
-		putByte( (l>>32).asInstanceOf[Int] )
-		putInt( l.asInstanceOf[Int] )
+		for (shift <- (bwidth - 1)*8 to 0 by -8)
+			putByte( (l >> shift).asInstanceOf[Int] )
 	}
 	
 	def getBig( addr: Long ): Long = {
