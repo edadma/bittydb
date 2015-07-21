@@ -393,7 +393,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 								io.append
 								io.putPair( kv )
 							} else {
-								val cont = io.allocComposite
+								val cont = io.allocPad
 								
 								cont.backpatch( io, first )
 								cont.putObjectChunk( Map(kv) )
@@ -445,7 +445,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 								io.putBig( header + io.bwidth, header + 3*io.bwidth )
 						}
 						
-						val cont = io.allocComposite
+						val cont = io.allocPad
 						
 						cont.backpatch( io, header + 2*io.bwidth )
 						cont.putArrayChunk( s, io, header )
@@ -476,7 +476,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 						
 					io.pos = header + io.bwidth
 					
-					val cont = io.allocComposite
+					val cont = io.allocPad
 					
 					cont.putArrayChunk( s, io, header, first )
 				case _ => sys.error( "can only use 'prepend' for an array" )

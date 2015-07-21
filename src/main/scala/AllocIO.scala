@@ -7,6 +7,7 @@ import collection.mutable.ListBuffer
 
 class AllocIO( cs: Charset, bw: Int, cw: Int ) extends MemIO {
 	private [bittydb] val backpatches = new ListBuffer[(IO, Long, Long)]
+	private [bittydb] var base: Long = _
 	
 	charset = cs
 	bwidth = bw
@@ -14,10 +15,8 @@ class AllocIO( cs: Charset, bw: Int, cw: Int ) extends MemIO {
 	
 	def backpatch( io: IO, src: Long ) =
 		backpatches += ((io, src, pos))
-
-	def totalSize: Long = size + allocSize
 	
-	def writeBackpatches( base: Long ) {
+	def writeBackpatches {
 		for ((io, src, target) <- backpatches)
 			io.putBig( src, base + target )
 	}

@@ -19,15 +19,13 @@ abstract class IO extends IOConstants
 	private [bittydb] var bwidth = IO.bwidth_default					// big (i.e. pointers, sizes) width (2 minimum)
 	private [bittydb] var cwidth = IO.cwidth_default					// cell width
 	
-	private [bittydb] lazy val vwidth = 1 + cwidth			// value width
-	private [bittydb] lazy val pwidth = 1 + 2*vwidth 	// pair width
+	private [bittydb] lazy val vwidth = 1 + cwidth						// value width
+	private [bittydb] lazy val pwidth = 1 + 2*vwidth 					// pair width
 	private [bittydb] lazy val ewidth = 1 + vwidth
 	
 	//
 	// abstract methods
 	//
-	
-	def allocSize = allocs map (_.totalSize) sum
 	
 	def close
 	
@@ -380,7 +378,7 @@ abstract class IO extends IOConstants
 			case a: collection.Map[_, _] =>
 				putByte( POINTER )
 		
-				val io = allocComposite
+				val io = allocPad
 				
 				io.putByte( MEMBERS )
 				io.putObject( a )
@@ -390,7 +388,7 @@ abstract class IO extends IOConstants
 			case a: collection.TraversableOnce[_] =>
 				putByte( POINTER )
 		
-				val io = allocComposite
+				val io = allocPad
 				
 				io.putByte( ELEMENTS )
 				io.putArray( a )
@@ -621,7 +619,7 @@ abstract class IO extends IOConstants
 	def need( width: Int ) = {
 		if (width > cwidth) {
 			putByte( POINTER )
-			(allocBasic, cwidth)
+			(alloc, cwidth)
 		} else
 			(this, cwidth - width)
 	}
@@ -633,58 +631,65 @@ abstract class IO extends IOConstants
 	//
 		
 	private [bittydb] val allocs = new ListBuffer[AllocIO]
-	private [bittydb] var primitive: AllocIO = null
-	
-	def allocBasic = {
-		if (primitive eq null) {
-			primitive = new AllocIO( charset, bwidth, cwidth )
-			allocs += primitive
-		} else
-			primitive
+	private [bittydb] var appendbase: Long = _
 		
-		primitive.backpatch( this, pos )
-//		padCell
-		primitive
-	}
-	
-	def allocComposite = {
+	def alloc = {
 		val res = new AllocIO( charset, bwidth, cwidth )
 		
 		allocs += res
 		res.backpatch( this, pos )
+		res
+	}
+	
+	def allocPad = {
+		val res = alloc
+		
 		padCell
 		res
 	}
 	
-	def writeAllocs( dest: IO, base: Long ) {
-		var offset = base
-		
-		inert {
-			for (a <- allocs) {
-				a.writeBackpatches( offset )
-				offset += a.size
-			}
-		}
-		
-		if (dest ne this)
-			dest.writeBuffer( this.asInstanceOf[MemIO] )
-			
+	private [bittydb] def placeAllocs( io: IO ) {
 		for (a <- allocs) {
-			a.writeAllocs( dest, offset )
-			offset += a.size
+			// find space
+			a.base = io.appendbase + bwidth
+			io.appendbase += bwidth + a.size
+			
+			a.placeAllocs( io )
+		}
+	}
+	
+	private [bittydb] def writeAllocBackpatches {
+		for (a <- allocs) {
+			a.writeBackpatches
+			a.writeAllocBackpatches
+		}
+	}
+	
+	private [bittydb] def writeAllocs( dest: IO ) {
+		for (a <- allocs) {
+			dest.pos = a.base - bwidth
+			dest.putBig( a.size )
+			dest.writeBuffer( a.asInstanceOf[MemIO] )
+			a.writeAllocs( dest )
 		}
 	}
 	
 	def finish {
 		if (!allocs.isEmpty)
 		{
-		val len = allocSize
-		
-			// allocate space
 			append
-			writeAllocs( this, pos )
+			appendbase = pos
+			
+			// allocate and set base pointers
+			placeAllocs( this )
+			
+			// write backpatches
+			writeAllocBackpatches
+			
+			// write allocs
+			writeAllocs( this )
+			
 			allocs.clear
-			primitive = null
 		}
 		
 		force
