@@ -44,10 +44,10 @@ The header of a database file has the layout:
 Field        | Contents         | Default | Description
 -----        | --------         | ------- | -----------
 identifier   | `0x07 BittyDB`   |         | 8 byte (64 bit) "magic number" equal to 523096455619626050 when viewed as a big-endian number, serving to identify the file type
-version      | <n> <version>    |         | format version: *n* is the number of bytes in the *version* number string
-charset      | <n> <charset>    | `UTF-8` | character set for strings: *n* is the number of bytes in the *charset* name string
-bwidth       | <n>              | `0x05`  | *n* is the width of "big" numbers in the database which are used for file pointers and chunk sizes
-cwidth       | <n>              | `0x08`  | *n* is the width of cells in the database which are the basic data "containers"
+version      | *n* *version*    |         | format version: *n* is the number of bytes in the *version* number string
+charset      | *n* *charset*    | `UTF-8` | character set for strings: *n* is the number of bytes in the *charset* name string
+bwidth       | *n*              | `0x05`  | *n* is the width of "big" numbers in the database which are used for file pointers and chunk sizes
+cwidth       | *n*              | `0x08`  | *n* is the width of cells in the database which are the basic data "containers"
 uuidOption   | `0x10/0x11`      | `0x10`  | option as to whether "_id" fields should be added automatically during insertion (off by default)
 
 Values
@@ -57,8 +57,8 @@ Generally all values of any (non-simple) kind that can be put into the database,
 
 Field        | Contents         | Default | Description
 -----        | --------         | ------- | -----------
-type         | <t>              |         | *t* is the one byte type identifier
-data         | <v>              |         | *v* is the value's data
+type         | *t*              |         | *t* is the one byte type identifier
+data         | *v*              |         | *v* is the value's data
 
 Values of one of the simple types only have the 'type' field.
 
@@ -74,13 +74,13 @@ The header of a root or non-object object has the layout:
 Field        | Contents         | Default | Description
 -----        | --------         | ------- | -----------
 type         | `0xA1`           |         | identifies a non-empty object
-last pointer | <p>              | `NUL`   | *p* points to the last chunk; if the last chunk if the only one, it follows directly and this pointer is NUL
+last pointer | *p*              | `NUL`   | *p* points to the last chunk; if the last chunk if the only one, it follows directly and this pointer is NUL
 
 Each chunk of an object has the layout:
 
 Field        | Contents         | Default | Description
 -----        | --------         | ------- | -----------
-next pointer | <p>              | `NUL`   | *p* points to the next chunk; if this is the last chunk, *p* is NUL
-size         | <s>              |         | *s* is the total size in bytes of all the pairs including pairs that are marked as removed
-pair         | <u> <k> <v>      |         | *u* is 0x00 if this pair has not been removed, 0x01 otherwise; *k* and *v* are a key/value pair - keys are encoded the same way as values
+next pointer | *p*              | `NUL`   | *p* points to the next chunk; if this is the last chunk, *p* is NUL
+size         | *s*              |         | *s* is the total size in bytes of all the pairs including pairs that are marked as removed
+pair         | *u* *k* *v*      |         | *u* is 0x00 if this pair has not been removed, 0x01 otherwise; *k* and *v* are a key/value pair - keys are encoded the same way as values
 ...          | ...              |         | other pairs if they exist
