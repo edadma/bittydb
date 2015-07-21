@@ -32,7 +32,7 @@ trait IOConstants {
 	val UBYTE_LENGTH = 0
 	val USHORT_LENGTH = 1
 	val INT_LENGTH = 2
-	val WITH_ENCODING = 4
+	val ENCODING_INCLUDED = 4
 	val SSTRING_MAX = 16
 	
 	val DATETIME_WIDTH = 17

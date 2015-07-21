@@ -257,7 +257,7 @@ abstract class IO extends IOConstants
 							case INT_LENGTH => getInt
 						}
 
-					if (encoding == WITH_ENCODING)
+					if (encoding == ENCODING_INCLUDED)
 						getString( len, Charset.forName(getByteString.get) )
 					else
 						getString( len )

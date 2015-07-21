@@ -153,10 +153,10 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 				super.get
 	}
 	
-	class DBFilePointer( private [bittydb] val addr: Long ) extends Pointer
+	class DBFilePointer( protected val addr: Long ) extends Pointer
 	
 	abstract class Pointer extends (Any => Pointer) {
-		private [bittydb] def addr: Long
+		protected def addr: Long
 		private [bittydb] val connection = Connection.this
 		
 		def collection( name: String ) = new Collection( this, name )
