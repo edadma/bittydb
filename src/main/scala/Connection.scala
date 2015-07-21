@@ -27,7 +27,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 	private [bittydb] var freeList: Long = _
 	private [bittydb] var _root: Long = _
 	
-	private [bittydb] var uuidOption = false
+	private [bittydb] var uuidOption = true
 	
 	if (io.size == 0) {
 		version = VERSION
