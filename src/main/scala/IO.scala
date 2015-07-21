@@ -177,47 +177,7 @@ abstract class IO extends IOConstants
 		writeByteChars( s )
 	}
 	
-// 	def getLen: Int = {
-// 		var len = 0
-// 		
-// 		def read {
-// 			val b = getByte
-// 			len = (len << 7) | (b&0x7F)
-// 			
-// 			if ((b&0x80) != 0)
-// 				read
-// 		}
-// 
-// 		read
-// 		len
-// 	}
-// 	
-// 	def putLen( l: Int ) {
-// 		if (l == 0)
-// 			putByte( 0 )
-// 		else {
-// 			var downshift = 28
-// 			var compare = 0x10000000
-// 			
-// 			while (l < compare) {
-// 				downshift -= 7
-// 				compare >>= 7
-// 			}
-// 			
-// 			while (downshift >= 0) {
-// 				putByte( (if (downshift > 0) 0x80 else 0) | ((l >> downshift)&0x7F) )
-// 				downshift -= 7
-// 			}
-// 		}
-// 	}
-	
 	def getString( len: Int, cs: Charset = charset ) = new String( getBytes(len), cs )
-	
-// 	def putString( s: Array[Byte] ) {
-// 		putBytes( s )
-// 	}
-// 	
-// 	def putString( s: String ) {putString( encode(s) )}
 
 	def getType: Int =
 		getUnsignedByte match {
@@ -446,37 +406,6 @@ abstract class IO extends IOConstants
 	def putValue( addr: Long, v: Any ) {
 		pos = addr
 		putValue( v )
-	}
-	
-	def putString( a: String ) {
-		val s = encode( a )
-		val io =
-			if (s.length > cwidth) {
-				putByte( POINTER )
-				val res = allocBasic
-				pad( bwidth )
-				res
-			} else
-				this
-		
-		if (s.isEmpty || s.length > SSTRING_MAX) {
-			s.length match {
-				case l if l < 256 =>
-					io.putByte( STRING|UBYTE_LENGTH )
-					io.putByte( l )
-				case l if l < 65536 => 
-					io.putByte( STRING|USHORT_LENGTH )
-					io.putShort( l )
-				case l =>
-					io.putByte( STRING|INT_LENGTH )
-					io.putInt( l )
-			}
-			
-			io.putBytes( s )
-		} else {
-			io.putByte( SSTRING|(s.length - 1) )
-			io.putBytes( s )
-		}
 	}
 	
 	def getObject = {
