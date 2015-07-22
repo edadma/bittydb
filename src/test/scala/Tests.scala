@@ -11,10 +11,15 @@ class Tests extends FreeSpec with PropertyChecks with Matchers
 	
 	"set/remove" in
 	{
-	val db = Connection.mem()
+	var db = Connection.mem()
 	
 		db.root.get shouldBe Map()
 		
+		db.root.set( "a" -> List(List("bc"), List(1)) )
+		db.root("a").get shouldBe List(List("bc"), List(1))
+	
+		db = Connection.mem()
+	
 		db.root.set( "a" -> List(1, 2, 3) ) shouldBe false
 		db.root.get shouldBe Map( "a" -> List(1, 2, 3) )
 		
@@ -144,5 +149,28 @@ class Tests extends FreeSpec with PropertyChecks with Matchers
 
 		db( "test" ) update (_("a") === 3, "b" -> "第三")
 		db.root("test").get shouldBe List(Map("a" -> 3, "b" -> "第三"))
+	}
+	
+	"disk insert, find, remove, update (functional style)" in
+	{
+		val db = Connection.disk( "test", 'charset -> "GB18030", 'uuid -> false )
+
+		db( "test" ).insert( Map("a" -> 1, "b" -> "first"), Map("a" -> 2, "b" -> "second"), Map("a" -> 3, "b" -> "third") )
+
+		db.root("test").get shouldBe List(Map("a" -> 1, "b" -> "first"), Map("a" -> 2, "b" -> "second"), Map("a" -> 3, "b" -> "third"))
+
+		(db( "test" ) find (_("a") < 3) toList) shouldBe List(Map("a" -> 1, "b" -> "first"), Map("a" -> 2, "b" -> "second"))
+
+		db( "test" ) remove (_("a") in Set(1, 2))
+		db.root("test").get shouldBe List(Map("a" -> 3, "b" -> "third"))
+
+		db( "test" ) update (_("a") === 3, "b" -> "第三")
+		db.root("test").get shouldBe List(Map("a" -> 3, "b" -> "第三"))
+		db.close
+		
+		val db1 = Connection.disk( "test" )
+
+		db1.root("test").get shouldBe List(Map("a" -> 3, "b" -> "第三"))
+		db1.close
 	}
 }

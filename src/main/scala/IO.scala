@@ -13,8 +13,7 @@ object IO {
 	private [bittydb] var cwidth_default = 8
 }
 
-abstract class IO extends IOConstants
-{
+abstract class IO extends IOConstants {
 	private [bittydb] var charset = UTF_8
 	private [bittydb] var bwidth = IO.bwidth_default					// big (i.e. pointers, sizes) width (2 minimum)
 	private [bittydb] var cwidth = IO.cwidth_default					// cell width
@@ -24,7 +23,9 @@ abstract class IO extends IOConstants
 	private [bittydb] lazy val vwidth = 1 + cwidth					// value width
 	private [bittydb] lazy val pwidth = 1 + 2*vwidth 					// pair width
 	private [bittydb] lazy val ewidth = 1 + vwidth
-	private [bittydb] lazy val minBits = bwidth
+	private [bittydb] lazy val lowestSize = bitCeiling( bwidth ).toInt
+	private [bittydb] lazy val sizeShift = Integer.numberOfTrailingZeros( lowestSize )
+	private [bittydb] lazy val bucketLen = bwidth*8 - sizeShift
 	
 	//
 	// abstract methods
@@ -625,10 +626,19 @@ abstract class IO extends IOConstants
 	//
 	// allocation
 	//
-		
+	
 	private [bittydb] val allocs = new ListBuffer[AllocIO]
 	private [bittydb] var appendbase: Long = _
+	
+	private [bittydb] def bitCeiling( n: Long ) = {
+		val highest = java.lang.Long.highestOneBit( n )
 		
+		if ((highest^n) == 0)
+			highest
+		else
+			highest << 1
+	}
+	
 	def alloc = {
 		val res = new AllocIO( this )
 		

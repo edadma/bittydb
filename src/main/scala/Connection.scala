@@ -12,12 +12,21 @@ import ca.hyperreal.lia.Math
 
 
 object Connection {
+	private def invalid = throw new InvalidDatabaseException
+	
 	def disk( file: String, options: (Symbol, Any)* ): Connection = disk( new File(file), options: _* )
 	
-	def disk( f: File, options: (Symbol, Any)* ) = new Connection( new DiskIO(f), options )
+	def disk( f: File, options: (Symbol, Any)* ) = {
+		if (Database.exists( f ) && f.length == 0)
+			invalid
+		else
+			new Connection( new DiskIO(f), options )
+	}
 	
 	def mem( options: (Symbol, Any)* ) = new Connection( new MemIO, options )
 }
+
+class InvalidDatabaseException extends Exception( "invalid database" )
 
 class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) extends AbstractMap[String, Collection] with IOConstants {
 	private [bittydb] var version: String = _
@@ -63,7 +72,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 		io putBoolean uuidOption
 		
 		io.bucketsPtr = io.pos
-		io.buckets = Array.fill( io.bwidth*8 - io.minBits )( 0 )
+		io.buckets = Array.fill( io.bucketLen )( NUL )
 		for (b <- io.buckets) io putBig b
 		rootPtr = io.pos
 		io putByte MEMBERS
@@ -73,11 +82,9 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 	else
 		io.getByteString match {
 			case Some( s ) if s == "BittyDB" =>
-				log( s )
-				
 				io.getByteString match {
 					case Some( v ) => version = v
-					case _ => invalid
+					case _ => Connection.invalid
 				}
 				
 				if (version > VERSION)
@@ -85,28 +92,26 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 					
 				io.getByteString match {
 					case Some( cs ) => io.charset = Charset.forName( cs )
-					case _ => invalid
+					case _ => Connection.invalid
 				}
 				
 				io.getByte match {
 					case n if 1 <= n && n <= 8 => io.bwidth = n
-					case _ => invalid
+					case _ => Connection.invalid
 				}
 				
 				io.getUnsignedByte match {
 					case n if io.bwidth <= n && n <= 255 => io.cwidth = n
-					case _ => invalid
+					case _ => Connection.invalid
 				}
 				
 				uuidOption = io.getBoolean
 				
 				io.bucketsPtr = io.pos
-//				buckets = io.getBig
+				io.buckets = (for (_ <- 1 to io.bucketLen) yield io.getBig).toArray
 				rootPtr = io.pos
-			case _ => invalid
+			case _ => Connection.invalid
 		}
-	
-	private def invalid = sys.error( "invalid database" )
 	
 	val root = new DBFilePointer( rootPtr )
 

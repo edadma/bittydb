@@ -1,6 +1,6 @@
 package ca.hyperreal.bittydb
 
-import java.io._
+import java.io.{RandomAccessFile, File}
 
 
 class DiskIO( f: File ) extends IO
