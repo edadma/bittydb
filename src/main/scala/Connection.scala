@@ -23,6 +23,12 @@ object Connection {
 			new Connection( new DiskIO(f), options )
 	}
 	
+	def temp( options: (Symbol, Any)* ) = {
+		val file = File.createTempFile( "temp", ".bittydb" )
+		
+		(file, new Connection( new DiskIO(file), options ))
+	}
+	
 	def mem( options: (Symbol, Any)* ) = new Connection( new MemIO, options )
 }
 
