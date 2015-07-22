@@ -24,6 +24,7 @@ abstract class IO extends IOConstants
 	private [bittydb] lazy val vwidth = 1 + cwidth					// value width
 	private [bittydb] lazy val pwidth = 1 + 2*vwidth 					// pair width
 	private [bittydb] lazy val ewidth = 1 + vwidth
+	private [bittydb] lazy val minBits = bwidth
 	
 	//
 	// abstract methods

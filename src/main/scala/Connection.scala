@@ -63,8 +63,8 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 		io putBoolean uuidOption
 		
 		io.bucketsPtr = io.pos
-		io.buckets = Array.fill( io.bwidth*8 - io.bwidth )( 0 )
-		for (_ <- 1 to io.buckets.length) io putBig NUL
+		io.buckets = Array.fill( io.bwidth*8 - io.minBits )( 0 )
+		for (b <- io.buckets) io putBig b
 		rootPtr = io.pos
 		io putByte MEMBERS
 		io putObject Map.empty
