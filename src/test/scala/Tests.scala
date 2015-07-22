@@ -153,7 +153,7 @@ class Tests extends FreeSpec with PropertyChecks with Matchers
 	
 	"disk insert, find, remove, update (functional style)" in
 	{
-		val db = Connection.disk( "test", 'charset -> "GB18030", 'uuid -> false )
+		val db = Connection.disk( "---test", 'charset -> "GB18030", 'uuid -> false )
 
 		db( "test" ).insert( Map("a" -> 1, "b" -> "first"), Map("a" -> 2, "b" -> "second"), Map("a" -> 3, "b" -> "third") )
 
@@ -168,9 +168,11 @@ class Tests extends FreeSpec with PropertyChecks with Matchers
 		db.root("test").get shouldBe List(Map("a" -> 3, "b" -> "第三"))
 		db.close
 		
-		val db1 = Connection.disk( "test" )
+		val db1 = Connection.disk( "---test" )
 
 		db1.root("test").get shouldBe List(Map("a" -> 3, "b" -> "第三"))
 		db1.close
+		
+		Database.remove( "---test" )
 	}
 }
