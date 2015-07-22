@@ -18,8 +18,10 @@ abstract class IO extends IOConstants
 	private [bittydb] var charset = UTF_8
 	private [bittydb] var bwidth = IO.bwidth_default					// big (i.e. pointers, sizes) width (2 minimum)
 	private [bittydb] var cwidth = IO.cwidth_default					// cell width
+	private [bittydb] var bucketsPtr: Long = _
+	private [bittydb] var buckets: Array[Long] = _
 	
-	private [bittydb] lazy val vwidth = 1 + cwidth						// value width
+	private [bittydb] lazy val vwidth = 1 + cwidth					// value width
 	private [bittydb] lazy val pwidth = 1 + 2*vwidth 					// pair width
 	private [bittydb] lazy val ewidth = 1 + vwidth
 	
@@ -89,7 +91,7 @@ abstract class IO extends IOConstants
 	// i/o methods based on abstract methods
 	//
 	
-	def getBig: Long = {//(getByte.asInstanceOf[Long]&0xFF)<<32 | getInt.asInstanceOf[Long]&0xFFFFFFFFL
+	def getBig: Long = {
 		var res = 0L
 		
 		for (_ <- 1 to bwidth) {
@@ -99,11 +101,6 @@ abstract class IO extends IOConstants
 		
 		res
 	}
-	
-// 	def putBig( l: Long ) {
-// 		putByte( (l>>32).asInstanceOf[Int] )
-// 		putInt( l.asInstanceOf[Int] )
-// 	}
 
 	def putBig( l: Long ) {
 		for (shift <- (bwidth - 1)*8 to 0 by -8)
@@ -594,8 +591,6 @@ abstract class IO extends IOConstants
 	
 	def skipDouble = skip( 8 )
 	
-//	def skipString = skip( getLen )
-	
 	def skipValue = skip( vwidth )
 	
 	def pad( n: Long ) =
@@ -634,7 +629,7 @@ abstract class IO extends IOConstants
 	private [bittydb] var appendbase: Long = _
 		
 	def alloc = {
-		val res = new AllocIO( charset, bwidth, cwidth )
+		val res = new AllocIO( this )
 		
 		allocs += res
 		res.backpatch( this, pos )
@@ -679,16 +674,9 @@ abstract class IO extends IOConstants
 		{
 			append
 			appendbase = pos
-			
-			// allocate and set base pointers
 			placeAllocs( this )
-			
-			// write backpatches
 			writeAllocBackpatches
-			
-			// write allocs
-			writeAllocs( this )
-			
+			writeAllocs( this )			
 			allocs.clear
 		}
 		

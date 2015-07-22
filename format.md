@@ -43,7 +43,7 @@ The header of a database file has the layout:
 
 Field        | Contents         | Default | Description
 -----        | --------         | ------- | -----------
-identifier   | `0x07 BittyDB`   |         | 8 byte (64 bit) "magic number" equal to 523096455619626050 when viewed as a big-endian number, serving to identify the file type
+identifier   | `0x07 BittyDB`   |         | 8 byte (64 bit) "magic number" equal to 523096455619626050 when viewed as a big-endian number, identifying the file type
 version      | *n* *version*    |         | format version: *n* is the number of bytes in the *version* number string
 charset      | *n* *charset*    | `UTF-8` | character set for strings: *n* is the number of bytes in the *charset* name string
 bwidth       | *n*              | `0x05`  | *n* is the width of "big" numbers in the database which are used for file pointers and chunk sizes
@@ -53,7 +53,7 @@ uuidOption   | `0x10/0x11`      | `0x10`  | option as to whether "_id" fields sh
 Values
 ------
 
-Generally all values of any (non-simple) kind that can be put into the database, including object keys, have the layout:
+Generally, all values of any (non-simple) type that can be put into the database, including object keys, have the layout:
 
 Field        | Contents         | Default | Description
 -----        | --------         | ------- | -----------

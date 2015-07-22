@@ -11,8 +11,7 @@ import collection.mutable.{HashMap, AbstractMap}
 import ca.hyperreal.lia.Math
 
 
-object Connection
-{
+object Connection {
 	def disk( file: String, options: (Symbol, Any)* ): Connection = disk( new File(file), options: _* )
 	
 	def disk( f: File, options: (Symbol, Any)* ) = new Connection( new DiskIO(f), options )
@@ -20,12 +19,9 @@ object Connection
 	def mem( options: (Symbol, Any)* ) = new Connection( new MemIO, options )
 }
 
-class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) extends AbstractMap[String, Collection] with IOConstants
-{
+class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) extends AbstractMap[String, Collection] with IOConstants {
 	private [bittydb] var version: String = _
-	private [bittydb] var freeListPtr: Long = _
-	private [bittydb] var freeList: Long = _
-	private [bittydb] var _root: Long = _
+	private [bittydb] var rootPtr: Long = _
 	
 	private [bittydb] var uuidOption = true
 	
@@ -66,10 +62,10 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 		io putByte io.cwidth
 		io putBoolean uuidOption
 		
-		freeListPtr = io.pos
-		freeList = 0
-		io putBig freeList
-		_root = io.pos
+		io.bucketsPtr = io.pos
+		io.buckets = Array.fill( io.bwidth*8 - io.bwidth )( 0 )
+		for (_ <- 1 to io.buckets.length) io putBig NUL
+		rootPtr = io.pos
 		io putByte MEMBERS
 		io putObject Map.empty
 		io.force
@@ -104,15 +100,15 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 				
 				uuidOption = io.getBoolean
 				
-				freeListPtr = io.pos
-				freeList = io.getBig
-				_root = io.pos
+				io.bucketsPtr = io.pos
+//				buckets = io.getBig
+				rootPtr = io.pos
 			case _ => invalid
 		}
 	
 	private def invalid = sys.error( "invalid database" )
 	
-	val root = new DBFilePointer( _root )
+	val root = new DBFilePointer( rootPtr )
 
 //	def apply( name: String ) = new Collection( root, name )
 	
@@ -208,11 +204,11 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 		
 		def put( v: Any ) {
 			v match {
-				case m: CMap[_, _] if addr == _root =>
-					io.size = _root + 1
+				case m: CMap[_, _] if addr == rootPtr =>
+					io.size = rootPtr + 1
 					io.pos = io.size
 					io.putObject( m )
-				case _ if addr == _root => sys.error( "can only 'put' an object at root" )
+				case _ if addr == rootPtr => sys.error( "can only 'put' an object at root" )
 				case _ => io.putValue( addr, v )
 			}
 			
