@@ -132,7 +132,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 	def get( key: String ): Option[Collection] = if (root.key( key ) == None) None else Some( default(key) )
 	
 	def iterator: Iterator[(String, Collection)] =
-		root.objectIterator map {
+		io.objectIterator( rootPtr ) map {
 			a =>
 				val name = io.getValue( a + 1 ).asInstanceOf[String]
 				
@@ -151,8 +151,11 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 	override def toString = "connection to " + io
 	
 	class Cursor( val elem: Long ) extends DBFilePointer( elem + 1 ) {
-		def remove = io.putByte( elem, UNUSED )
-		
+		def remove = {
+			io.putByte( elem, UNUSED )
+			io.remove( elem + 1 )
+		}
+
 		override def get =
 			if (io.getByte( elem ) == UNUSED)
 				sys.error( "element has been removed" )
@@ -226,77 +229,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 			io.finish
 		}
 	
-	def list = objectIterator map {a => io.getValue( a + 1 ) -> new DBFilePointer( io.pos )} toList
-	
-	def objectIterator: Iterator[Long] =
-		io.getType( addr ) match {
-			case EMPTY => Iterator.empty
-			case MEMBERS =>
-				val header = io.pos
-				
-				new AbstractIterator[Long] {
-					var cont: Long = _
-					var chunksize: Long = _
-					var cur: Long = _
-					var scan = false
-					var done = false
-					
-					chunk( header + io.bwidth )
-					
-					private def chunk( p: Long ) {
-						cont = io.getBig( p )
-						chunksize = io.getBig
-						cur = io.pos
-					}
-					
-					def hasNext = {
-						def advance = {
-							chunksize -= io.pwidth
-							
-							if (chunksize == 0)
-								if (cont == NUL) {
-									done = true
-									false
-								} else {
-									chunk( cont )
-									true
-								}
-							else {
-								cur += io.pwidth
-								true
-							}
-						}
-
-						def nextused: Boolean =
-							if (advance)
-								if (io.getByte( cur ) == USED)
-									true
-								else
-									nextused
-							else
-								false
-						
-						if (done)
-							false
-						else if (scan)
-							if (nextused) {
-								scan = false
-								true
-							} else
-								false
-						else
-							true
-					}
-					
-					def next =
-						if (hasNext) {
-							scan = true
-							cur
-						} else
-							throw new NoSuchElementException( "next on empty objectIterator" )
-				}
-			case _ => sys.error( "can only use 'objectIterator' for an object" )
-		}
+	def list = io.objectIterator( addr ) map {a => io.getValue( a + 1 ) -> new DBFilePointer( io.pos )} toList
 		
 		private [bittydb] def lookup( key: Any ): Either[Option[Long], Long] = {
 			var where: Option[Long] = None
@@ -347,6 +280,8 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 						case Left( _ ) => false
 						case Right( at ) =>
 							io.putByte( at, UNUSED )
+							io.remove( at + 1 )
+							io.remove( at + 1 + io.vwidth )
 							true
 					}
 				case _ => sys.error( "can only use 'remove' for an object" )
@@ -499,89 +434,13 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 				case _ => sys.error( "can only use 'length' for an array" )
 			}
 		
+		def cursor = io.arrayIterator( addr ) map (new Cursor( _ ))
+		
 		def membersAs[A] = members.asInstanceOf[Iterator[A]]
 		
-		def members = arrayIterator map (_.get)
+		def members = cursor map (_.get)
 		
-		def at( index: Int ) = arrayIterator drop (index) next
-		
-		def arrayIterator = {
-			io.getType( addr ) match {
-				case NIL => Iterator.empty
-				case ELEMENTS =>
-					val header = io.pos
-					
-					io.skipBig
-					
-					val first = io.getBig match {
-						case NUL => header + 3*io.bwidth
-						case p => p
-					}
-					
-					new AbstractIterator[Cursor] {
-						var cont: Long = _
-						var chunksize: Long = _
-						var cur: Long = _
-						var scan = false
-						var done = false
-						
-						chunk( first )
-						
-						private def chunk( p: Long ) {
-							cont = io.getBig( p )
-							chunksize = io.getBig
-							cur = io.pos
-						}
-						
-						def hasNext = {
-							def advance = {
-								chunksize -= io.ewidth
-								
-								if (chunksize == 0)
-									if (cont == NUL) {
-										done = true
-										false
-									} else {
-										chunk( cont )
-										true
-									}
-								else {
-									cur += io.ewidth
-									true
-								}
-							}
-
-							def nextused: Boolean =
-								if (advance)
-									if (io.getByte( cur ) == USED)
-										true
-									else
-										nextused
-								else
-									false
-							
-							if (done)
-								false
-							else if (scan)
-								if (nextused) {
-									scan = false
-									true
-								} else
-									false
-							else
-								true
-						}
-						
-						def next =
-							if (hasNext) {
-								scan = true
-								new Cursor( cur )
-							} else
-								throw new NoSuchElementException( "next on empty arrayIterator" )
-					}
-				case _ => sys.error( "can only use 'arrayIterator' for an array" )
-			}
-		}
+		def at( index: Int ) = new Cursor( io.arrayIterator(addr) drop (index) next )
 		
 		def kind = io.getType( addr )
 		

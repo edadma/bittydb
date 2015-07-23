@@ -100,7 +100,7 @@ class Tests extends FreeSpec with PropertyChecks with Matchers
 	val db = Connection.mem()
 	
 		db.root.set( "a" -> Nil )
-		db.root( "a" ).arrayIterator.isEmpty shouldBe true
+		db.root( "a" ).cursor.isEmpty shouldBe true
 		
 		db.root( "a" ).append( 5 )
 		db.root( "a" ).members.toList shouldBe List( 5 )
@@ -109,7 +109,7 @@ class Tests extends FreeSpec with PropertyChecks with Matchers
 		db.root( "a" ).prepend( 4 )
 		db.root( "a" ).get shouldBe List( 4, 1, 2, 5, 3 )
 		
-		db.root( "a" ).arrayIterator.drop(3).next.put( "happy" )
+		db.root( "a" ).cursor.drop(3).next.put( "happy" )
 		db.root( "a" ).get shouldBe List( 4, 1, 2, "happy", 3 )
 		db.root( "a" ).members.toList shouldBe List( 4, 1, 2, "happy", 3 )
 	}

@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.time.{Instant, OffsetDateTime, ZoneOffset}
 import java.util.UUID
 
+import collection.AbstractIterator
 import collection.mutable.{ListBuffer, HashMap}
 
 
@@ -23,10 +24,14 @@ abstract class IO extends IOConstants {
 	private [bittydb] lazy val vwidth = 1 + cwidth					// value width
 	private [bittydb] lazy val pwidth = 1 + 2*vwidth 					// pair width
 	private [bittydb] lazy val ewidth = 1 + vwidth
-	private [bittydb] lazy val lowestSize = bitCeiling( bwidth ).toInt
+	private [bittydb] lazy val lowestSize = bitCeiling( vwidth + 1 ).toInt		// smallest allocation block needed
 	private [bittydb] lazy val sizeShift = Integer.numberOfTrailingZeros( lowestSize )
 	private [bittydb] lazy val bucketLen = bwidth*8 - sizeShift
 	
+	private [bittydb] lazy val bucket = java.lang.Long.numberOfTrailingZeros(bitCeiling(size) max lowestSize) - sizeShift
+	
+//	println( bwidth, lowestSize, sizeShift, bucketLen )
+
 	//
 	// abstract methods
 	//
@@ -527,6 +532,157 @@ abstract class IO extends IOConstants {
 	}
 
 	//
+	// Iterators
+	//
+	
+	def objectIterator( addr: Long ): Iterator[Long] =
+		getType( addr ) match {
+			case EMPTY => Iterator.empty
+			case MEMBERS =>
+				val header = pos
+				
+				new AbstractIterator[Long] {
+					var cont: Long = _
+					var chunksize: Long = _
+					var cur: Long = _
+					var scan = false
+					var done = false
+					
+					chunk( header + bwidth )
+					
+					private def chunk( p: Long ) {
+						cont = getBig( p )
+						chunksize = getBig
+						cur = pos
+					}
+					
+					def hasNext = {
+						def advance = {
+							chunksize -= pwidth
+							
+							if (chunksize == 0)
+								if (cont == NUL) {
+									done = true
+									false
+								} else {
+									chunk( cont )
+									true
+								}
+							else {
+								cur += pwidth
+								true
+							}
+						}
+
+						def nextused: Boolean =
+							if (advance)
+								if (getByte( cur ) == USED)
+									true
+								else
+									nextused
+							else
+								false
+						
+						if (done)
+							false
+						else if (scan)
+							if (nextused) {
+								scan = false
+								true
+							} else
+								false
+						else
+							true
+					}
+					
+					def next =
+						if (hasNext) {
+							scan = true
+							cur
+						} else
+							throw new NoSuchElementException( "next on empty objectIterator" )
+				}
+			case _ => sys.error( "can only use 'objectIterator' for an object" )
+		}
+		
+	def arrayIterator( addr: Long ) =
+		getType( addr ) match {
+			case NIL => Iterator.empty
+			case ELEMENTS =>
+				val header = pos
+				
+				skipBig
+				
+				val first = getBig match {
+					case NUL => header + 3*bwidth
+					case p => p
+				}
+				
+				new AbstractIterator[Long] {
+					var cont: Long = _
+					var chunksize: Long = _
+					var cur: Long = _
+					var scan = false
+					var done = false
+					
+					chunk( first )
+					
+					private def chunk( p: Long ) {
+						cont = getBig( p )
+						chunksize = getBig
+						cur = pos
+					}
+					
+					def hasNext = {
+						def advance = {
+							chunksize -= ewidth
+							
+							if (chunksize == 0)
+								if (cont == NUL) {
+									done = true
+									false
+								} else {
+									chunk( cont )
+									true
+								}
+							else {
+								cur += ewidth
+								true
+							}
+						}
+
+						def nextused: Boolean =
+							if (advance)
+								if (getByte( cur ) == USED)
+									true
+								else
+									nextused
+							else
+								false
+						
+						if (done)
+							false
+						else if (scan)
+							if (nextused) {
+								scan = false
+								true
+							} else
+								false
+						else
+							true
+					}
+					
+					def next =
+						if (hasNext) {
+							scan = true
+							cur
+						} else
+							throw new NoSuchElementException( "next on empty arrayIterator" )
+				}
+			case _ => sys.error( "can only use 'arrayIterator' for an array" )
+		}
+
+	//
 	// utility methods
 	//
 	
@@ -639,6 +795,35 @@ abstract class IO extends IOConstants {
 			highest << 1
 	}
 	
+	def remove( addr: Long ) {
+		if (getUnsignedByte( addr ) == POINTER) {
+			val p = getBig( addr + 1 )
+			
+			getUnsignedByte( p ) match {
+				case MEMBERS =>
+					for (m <- objectIterator( p )) {
+						remove( m + 1 )
+						remove( m + 1 + vwidth )
+					}
+				case ELEMENTS =>
+					for (e <- arrayIterator( p ))
+						remove( e + 1 )
+				case _ =>
+			}
+			
+			dealloc( p )
+		}
+	}
+	
+	def dealloc( p: Long ) {
+		val bind = getByte( p - 1 )
+		val baddr = bind*bwidth + bucketsPtr
+		
+		putBig( p, buckets(bind) )
+		buckets(bind) = p
+		putBig( baddr, p )
+	}
+	
 	def alloc = {
 		val res = new AllocIO( this )
 		
@@ -671,13 +856,10 @@ abstract class IO extends IOConstants {
 		}
 	}
 	
-	// check
-	private [bittydb] def bucket( size: Long ) = java.lang.Long.numberOfTrailingZeros(bitCeiling(size) max lowestSize) - sizeShift
-	
 	private [bittydb] def writeAllocs( dest: IO ) {
 		for (a <- allocs) {
 			dest.pos = a.base - 1
-			dest.putByte( bucket(a.size) )
+			dest.putByte( a.bucket )
 			dest.writeBuffer( a.asInstanceOf[MemIO] )
 			a.writeAllocs( dest )
 		}
