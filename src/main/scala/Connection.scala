@@ -332,7 +332,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 					io.finish
 					false
 				case MEMBERS =>
-					val first = io.pos
+					val header = io.pos
 					
 					lookup( kv._1 ) match {
 						case Left( None ) =>
@@ -342,14 +342,14 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 // 								io.append
 // 								io.putPair( kv )
 // 							} else {
-								io.getBig( first ) match {
+								io.getBig( header ) match {
 									case NUL =>
 									case last => io.pos = last
 								}
 								
 								val cont = io.allocPad
 								
-								cont.backpatch( io, first )
+								cont.backpatch( io, header )
 								cont.putObjectChunk( Map(kv) )
 //							}
 							
@@ -377,23 +377,28 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 
 					io.skipBig
 					
-					if (ending) {
-						io.skipBig
-						
-						val sizeptr = io.pos
-						
-						io.append
-						
-						var count = 0L
-						
-						for (e <- s) {
-							io.putElement( e )
-							count += 1
+// 					if (ending) {
+// 						io.skipBig
+// 						
+// 						val sizeptr = io.pos
+// 						
+// 						io.append
+// 						
+// 						var count = 0L
+// 						
+// 						for (e <- s) {
+// 							io.putElement( e )
+// 							count += 1
+// 						}
+// 						
+// 						io.addBig( sizeptr, count*io.ewidth )
+// 						io.addBig( header, count )
+// 					} else {
+						io.getBig( header + 2*io.bwidth ) match {
+							case NUL =>
+							case last => io.pos = last
 						}
 						
-						io.addBig( sizeptr, count*io.ewidth )
-						io.addBig( header, count )
-					} else {
 						io.inert {
 							if (io.getBig( header + io.bwidth ) == NUL)
 								io.putBig( header + io.bwidth, header + 3*io.bwidth )
@@ -403,7 +408,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 						
 						cont.backpatch( io, header + 2*io.bwidth )
 						cont.putArrayChunk( s, io, header )
-					}
+// 					}
 				case _ => sys.error( "can only use 'append' for an array" )
 			}
 			
