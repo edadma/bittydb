@@ -9,15 +9,11 @@ object Main extends App {
 	
 	var db = Connection.mem()
 	
-	db.root.set( "a" -> "bc" )
-	println( db.root.get )
 	db.io.dump
-	
-	db.root.remove( "a" )
 	println( db.root.get )
-	db.io.dump
-	
-	db.root.set( "a" -> "de" )
+	db.root.set( "a" -> List(0x12) )
+// 	db.root.set( "b" -> 0x34 )
+ 	db.io.dump
 	println( db.root.get )
-	db.io.dump
+// 	println( db.io.objectIterator(db.rootPtr).next.toHexString )
 }

@@ -81,8 +81,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 		io.buckets = Array.fill( io.bucketLen )( NUL )
 		for (b <- io.buckets) io putBig b
 		rootPtr = io.pos
-		io putByte MEMBERS
-		io putObject Map.empty
+		io putValue( Map.empty )
 		io.force
 	}
 	else
@@ -256,7 +255,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 					}
 				}
 				
-				if (cont > 0) {
+				if (cont != NUL) {
 					io.pos = cont
 					chunk
 				}
@@ -323,23 +322,36 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 			
 		def set( kv: (Any, Any) ) =
 			io.getType( addr ) match {
-				case EMPTY => io.putValue( addr, Map(kv) )
+				case EMPTY if addr == rootPtr =>
+					io.putByte( addr, MEMBERS )
+					io.putObject( Map(kv) )
+					io.finish
+					false
+				case EMPTY =>
+					io.putValue( addr, Map(kv) )
+					io.finish
+					false
 				case MEMBERS =>
 					val first = io.pos
 					
 					lookup( kv._1 ) match {
 						case Left( None ) =>
-							if (ending) {
-								io.skipBig
-								io.addBig( io.pwidth )
-								io.append
-								io.putPair( kv )
-							} else {
+// 							if (ending) {
+// 								io.skipBig
+// 								io.addBig( io.pwidth )
+// 								io.append
+// 								io.putPair( kv )
+// 							} else {
+								io.getBig( first ) match {
+									case NUL =>
+									case last => io.pos = last
+								}
+								
 								val cont = io.allocPad
 								
 								cont.backpatch( io, first )
 								cont.putObjectChunk( Map(kv) )
-							}
+//							}
 							
 							io.finish
 							false

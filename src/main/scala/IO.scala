@@ -441,6 +441,11 @@ abstract class IO extends IOConstants {
 		putObjectChunk( m )
 	}
 	
+	def putObject( addr: Long, m: collection.Map[_, _] ) {
+		pos = addr
+		putObject( m )
+	}
+	
 	def putObjectChunk( m: collection.Map[_, _] ) {
 		padBig	// continuation pointer
 		
