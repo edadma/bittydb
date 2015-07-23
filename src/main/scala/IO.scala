@@ -657,8 +657,8 @@ abstract class IO extends IOConstants {
 	private [bittydb] def placeAllocs( io: IO ) {
 		for (a <- allocs) {
 			// find space
-			a.base = io.appendbase + bwidth
-			io.appendbase += bwidth + a.size
+			a.base = io.appendbase + 1
+			io.appendbase += 1 + a.size
 			
 			a.placeAllocs( io )
 		}
@@ -671,10 +671,13 @@ abstract class IO extends IOConstants {
 		}
 	}
 	
+	// check
+	private [bittydb] def bucket( size: Long ) = java.lang.Long.numberOfTrailingZeros(bitCeiling(size) max lowestSize) - sizeShift
+	
 	private [bittydb] def writeAllocs( dest: IO ) {
 		for (a <- allocs) {
-			dest.pos = a.base - bwidth
-			dest.putBig( a.size )
+			dest.pos = a.base - 1
+			dest.putByte( bucket(a.size) )
 			dest.writeBuffer( a.asInstanceOf[MemIO] )
 			a.writeAllocs( dest )
 		}
