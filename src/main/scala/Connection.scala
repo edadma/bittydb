@@ -217,12 +217,19 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 		
 		def put( v: Any ) {
 			v match {
-				case m: CMap[_, _] if addr == rootPtr =>
-					io.size = rootPtr + 1
+				case m: CMap[_, _] if addr == rootPtr && m.isEmpty =>
+					io.size = rootPtr
 					io.pos = io.size
+					io putValue( Map.empty )
+				case m: CMap[_, _] if addr == rootPtr =>
+					io.size = rootPtr
+					io.pos = io.size
+					io.putByte( addr, MEMBERS )
 					io.putObject( m )
 				case _ if addr == rootPtr => sys.error( "can only 'put' an object at root" )
-				case _ => io.putValue( addr, v )
+				case _ =>
+					io.remove( addr )
+					io.putValue( addr, v )
 			}
 			
 			io.finish

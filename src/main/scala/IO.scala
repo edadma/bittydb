@@ -815,6 +815,7 @@ abstract class IO extends IOConstants {
 			}
 			
 			dealloc( p )
+			putByte( addr, NULL )
 		}
 	}
 	
