@@ -49,6 +49,9 @@ charset      | *n* *charset*    | `UTF-8` | character set for strings: *n* is th
 bwidth       | *n*              | `0x05`  | *n* is the width of "big" numbers in the database which are used for file pointers and chunk sizes
 cwidth       | *n*              | `0x08`  | *n* is the width of cells in the database which are the basic data "containers"
 uuidOption   | `0x10/0x11`      | `0x10`  | option as to whether "_id" fields should be added automatically during insertion (off by default)
+buckets      |                  |         | reclaimed storage bucket pointers
+root         | `0xA0/0xA1`      | `0xA0`  | root object identifier
+
 
 Values
 ------
@@ -67,9 +70,9 @@ The header is followed immediately by the *root* object.  All other values in th
 Objects
 -------
 
-An empty object is a simple type with type identifier `0xA0`.  The only exception is the root object which always begins empty but is encoded as a non-empty object would normally be but with no key/values pairs in it.
+An empty object is a simple type with type identifier `0xA0`.
 
-The header of a root or non-object object has the layout:
+The header of a non-empty object has the layout:
 
 Field        | Contents         | Default | Description
 -----        | --------         | ------- | -----------
