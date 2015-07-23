@@ -845,10 +845,10 @@ abstract class IO extends IOConstants {
 					a.base = io.appendbase + 1
 					io.appendbase += 1 + a.size
 				case p =>
-					val ptr = getBig( p )
+					val ptr = io.getBig( p )
 				
 					io.buckets( a.bucket ) = ptr
-					putBig( bucketPtr(a.bucket), ptr )
+					io.putBig( bucketPtr(a.bucket), ptr )
 					a.base = p
 			}
 			
