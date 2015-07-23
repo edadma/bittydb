@@ -28,8 +28,6 @@ abstract class IO extends IOConstants {
 	private [bittydb] lazy val sizeShift = Integer.numberOfTrailingZeros( lowestSize )
 	private [bittydb] lazy val bucketLen = bwidth*8 - sizeShift
 	
-	private [bittydb] lazy val bucket = java.lang.Long.numberOfTrailingZeros(bitCeiling(size) max lowestSize) - sizeShift
-	
 //	println( bwidth, lowestSize, sizeShift, bucketLen )
 
 	//
@@ -815,13 +813,14 @@ abstract class IO extends IOConstants {
 		}
 	}
 	
+	def bucketPtr( bucketIndex: Int ) = bucketIndex*bwidth + bucketsPtr
+	
 	def dealloc( p: Long ) {
 		val bind = getByte( p - 1 )
-		val baddr = bind*bwidth + bucketsPtr
 		
 		putBig( p, buckets(bind) )
 		buckets(bind) = p
-		putBig( baddr, p )
+		putBig( bucketPtr(bind), p )
 	}
 	
 	def alloc = {
@@ -841,9 +840,17 @@ abstract class IO extends IOConstants {
 	
 	private [bittydb] def placeAllocs( io: IO ) {
 		for (a <- allocs) {
-			// find space
-			a.base = io.appendbase + 1
-			io.appendbase += 1 + a.size
+			io.buckets( a.bucket ) match {
+				case NUL =>
+					a.base = io.appendbase + 1
+					io.appendbase += 1 + a.size
+				case p =>
+					val ptr = getBig( p )
+				
+					io.buckets( a.bucket ) = ptr
+					putBig( bucketPtr(a.bucket), ptr )
+					a.base = p
+			}
 			
 			a.placeAllocs( io )
 		}

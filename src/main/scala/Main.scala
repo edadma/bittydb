@@ -16,4 +16,8 @@ object Main extends App {
 	db.root.remove( "a" )
 	println( db.root.get )
 	db.io.dump
+	
+	db.root.set( "a" -> "de" )
+	println( db.root.get )
+	db.io.dump
 }

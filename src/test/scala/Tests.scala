@@ -39,11 +39,11 @@ class Tests extends FreeSpec with PropertyChecks with Matchers
 		db.root.set( "d" -> 5678 ) shouldBe false
 		db.root.get shouldBe Map( "a" -> List(1, 2, 3), "bb" -> 234, "c" -> "qwerqwerqwer", "d" -> 5678, "e" -> Map("x" -> "asdfasdfasdf", "y" -> "zxcvzxcvzxcv") )
 		
-		db.root.remove( "asdf" ) shouldBe false
-		db.root.get shouldBe Map( "a" -> List(1, 2, 3), "bb" -> 234, "c" -> "qwerqwerqwer", "d" -> 5678, "e" -> Map("x" -> "asdfasdfasdf", "y" -> "zxcvzxcvzxcv") )
-		
-		db.root.set( "d" -> "wow" ) shouldBe true
-		db.root.get shouldBe Map( "a" -> List(1, 2, 3), "bb" -> 234, "c" -> "qwerqwerqwer", "d" -> "wow", "e" -> Map("x" -> "asdfasdfasdf", "y" -> "zxcvzxcvzxcv") )
+// 		db.root.remove( "asdf" ) shouldBe false
+// 		db.root.get shouldBe Map( "a" -> List(1, 2, 3), "bb" -> 234, "c" -> "qwerqwerqwer", "d" -> 5678, "e" -> Map("x" -> "asdfasdfasdf", "y" -> "zxcvzxcvzxcv") )
+// 		
+// 		db.root.set( "d" -> "wow" ) shouldBe true
+// 		db.root.get shouldBe Map( "a" -> List(1, 2, 3), "bb" -> 234, "c" -> "qwerqwerqwer", "d" -> "wow", "e" -> Map("x" -> "asdfasdfasdf", "y" -> "zxcvzxcvzxcv") )
 	}
 	
 	"put" in
