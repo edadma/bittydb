@@ -176,7 +176,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 					new Pointer {
 						def addr = sys.error( "invalid pointer" )
 		
-						override def !==( a: Any ) = get != a
+						override def =!=( a: Any ) = false
 						
 						override def <( a: Any ) = false
 						
@@ -201,7 +201,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 		
 		def ===( a: Any ) = get == a
 		
-		def !==( a: Any ) = get != a
+		def =!=( a: Any ) = get != a
 		
 		def <( a: Any ) = Math.predicate( '<, get, a )
 		
