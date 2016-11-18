@@ -1,17 +1,14 @@
-import AssemblyKeys._
-
-
 name := "bittydb"
 
-version := "0.1"
+version := "0.2"
 
-scalaVersion := "2.11.6"
+scalaVersion := "2.12.0"
 
 scalacOptions ++= Seq( "-deprecation", "-feature", "-language:postfixOps", "-language:implicitConversions", "-language:existentials" )
 
 incOptions := incOptions.value.withNameHashing( true )
 
-organization := "ca.hyperreal"
+organization := "xyz.hyperreal"
 
 //resolvers += Resolver.sonatypeRepo( "snapshots" )
 
@@ -20,30 +17,39 @@ resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/release
 resolvers += "Hyperreal Repository" at "https://dl.bintray.com/edadma/maven"
 
 libraryDependencies ++= Seq(
-	"org.scalatest" %% "scalatest" % "2.2.1" % "test",
-	"org.scalacheck" %% "scalacheck" % "1.11.5" % "test"
-	)
-
-//libraryDependencies ++= Seq(
-//	"org.slf4j" % "slf4j-api" % "1.7.7",
-//	"org.slf4j" % "slf4j-simple" % "1.7.7"
-//	)
+	"org.scalatest" %% "scalatest" % "3.0.0" % "test",
+	"org.scalacheck" %% "scalacheck" % "1.13.4" % "test"
+)
 
 libraryDependencies ++= Seq(
-	"ca.hyperreal" %% "lia" % "0.17"
+//	"org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4",
+//	"org.scala-lang.modules" %% "scala-swing" % "2.0.0-M2"
+)
+
+libraryDependencies ++= Seq(
+	"xyz.hyperreal" %% "lia" % "0.19"
+)
+
+libraryDependencies ++= {
+	val akkaV = "2.4.12"
+	val sprayV = "1.3.4"
+	Seq(
+//		"io.spray"          %% "spray-can"     % sprayV,
+//		"io.spray"          %% "spray-routing" % sprayV,
+//		"io.spray"          %% "spray-json"    % "1.3.2",
+//		"io.spray"          %% "spray-testkit" % sprayV   % "test",
+//		"com.typesafe.akka" %% "akka-actor"    % akkaV
+//		"com.typesafe.akka" %% "akka-remote"   % akkaV,
+//		"com.typesafe.akka" %% "akka-testkit"  % akkaV    % "test",
+//		"org.specs2"        %% "specs2-core"   % "2.3.11" % "test"
 	)
+}
 
-mainClass in (Compile, run) := Some( "ca.hyperreal." + name.value + ".Main" )
+mainClass in (Compile, run) := Some( "xyz.hyperreal." + name.value.replace('-', '_') + ".Main" )
 
-assemblySettings
+mainClass in assembly := Some( "xyz.hyperreal." + name.value.replace('-', '_') + ".Main" )
 
-mainClass in assembly := Some( "ca.hyperreal." + name.value + ".Main" )
-
-jarName in assembly := name.value + "-" + version.value + ".jar"
-
-seq(bintraySettings:_*)
-
-isSnapshot := true
+assemblyJarName in assembly := name.value + "-" + version.value + ".jar"
 
 publishMavenStyle := true
 
@@ -53,17 +59,17 @@ pomIncludeRepository := { _ => false }
 
 licenses := Seq("MIT" -> url("http://opensource.org/licenses/MIT"))
 
-homepage := Some(url("https://github.com/edadma/sscheme"))
+homepage := Some(url("https://github.com/edadma/" + name.value))
 
 pomExtra := (
   <scm>
-    <url>git@github.com:edadma/sscheme.git</url>
-    <connection>scm:git:git@github.com:edadma/sscheme.git</connection>
+    <url>git@github.com:edadma/{name.value}.git</url>
+    <connection>scm:git:git@github.com:edadma/{name.value}.git</connection>
   </scm>
   <developers>
     <developer>
       <id>edadma</id>
       <name>Edward A. Maxedon, Sr.</name>
-      <url>http://hyperreal.ca</url>
+      <url>https://github.com/edadma</url>
     </developer>
   </developers>)

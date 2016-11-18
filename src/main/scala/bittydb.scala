@@ -1,4 +1,4 @@
-package ca.hyperreal
+package xyz.hyperreal
 
 //import org.slf4j.LoggerFactory
 import java.time.{Instant, OffsetDateTime}

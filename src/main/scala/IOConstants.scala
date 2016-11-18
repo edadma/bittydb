@@ -1,4 +1,4 @@
-package ca.hyperreal.bittydb
+package xyz.hyperreal.bittydb
 
 
 trait IOConstants {

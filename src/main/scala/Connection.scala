@@ -1,4 +1,4 @@
-package ca.hyperreal.bittydb
+package xyz.hyperreal.bittydb
 
 import java.io.File
 import java.nio.charset.Charset
@@ -8,7 +8,7 @@ import util.Either
 import collection.{TraversableOnce, AbstractIterator, Map => CMap}
 import collection.mutable.{HashMap, AbstractMap}
 
-import ca.hyperreal.lia.Math
+import xyz.hyperreal.lia.Math
 
 
 object Connection {

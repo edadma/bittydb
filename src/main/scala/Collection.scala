@@ -1,11 +1,11 @@
-package ca.hyperreal.bittydb
+package xyz.hyperreal.bittydb
 
 import java.util.UUID._
 import java.time.Instant
 
 import collection.mutable.ListBuffer
 
-import ca.hyperreal.lia.Math
+import xyz.hyperreal.lia.Math
 
 
 object Collection {

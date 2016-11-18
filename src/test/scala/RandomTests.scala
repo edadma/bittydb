@@ -1,4 +1,4 @@
-package ca.hyperreal.bittydb
+package xyz.hyperreal.bittydb
 
 import collection.mutable.{ListBuffer, HashMap}
 

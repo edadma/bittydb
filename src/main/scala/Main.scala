@@ -1,6 +1,6 @@
-package ca.hyperreal.bittydb
+package xyz.hyperreal.bittydb
 
-import ca.hyperreal.lia.Math
+import xyz.hyperreal.lia.Math
 
 
 object Main extends App {
