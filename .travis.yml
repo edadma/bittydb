@@ -1,11 +1,7 @@
 language: scala
 
 scala:
-  - 2.11.6
+  - 2.12.0
 
 jdk:
   - oraclejdk8
-
-before_script:
-  - mkdir -p $HOME/.sbt/launchers/0.13.8/
-  - curl -L -o $HOME/.sbt/launchers/0.13.8/sbt-launch.jar http://dl.bintray.com/typesafe/ivy-releases/org.scala-sbt/sbt-launch/0.13.8/sbt-launch.jar
