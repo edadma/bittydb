@@ -1,8 +1,10 @@
 name := "bittydb"
 
-version := "0.2"
+version := "0.3"
 
-scalaVersion := "2.12.0"
+scalaVersion := "2.12.1"
+
+crossScalaVersions := Seq( "2.11.8" )
 
 scalacOptions ++= Seq( "-deprecation", "-feature", "-language:postfixOps", "-language:implicitConversions", "-language:existentials" )
 
@@ -27,7 +29,7 @@ libraryDependencies ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-	"xyz.hyperreal" %% "lia" % "0.19"
+	"xyz.hyperreal" %% "lia" % "0.20"
 )
 
 libraryDependencies ++= {
