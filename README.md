@@ -9,7 +9,7 @@ Example
 
 Here is a simple example demonstrating database insertion, querying and deletion.
 
-	import ca.hyperreal.bittydb
+	import xyz.hyperreal.bittydb
 
 	object Main extends App
 	{
@@ -61,7 +61,7 @@ Use the following elements to use BittyDB in your Maven project:
 	</repository>
 
 	<dependency>
-		<groupId>ca.hyperreal</groupId>
+		<groupId>xyz.hyperreal</groupId>
 		<artifactId>bittydb</artifactId>
 		<version>0.1</version>
 	</dependency>
@@ -70,14 +70,14 @@ Add the following to your `build.sbt` file to use BittyDB in your SBT project:
 
 	resolvers += "Hyperreal Repository" at "https://dl.bintray.com/edadma/maven"
 
-	libraryDependencies += "ca.hyperreal" %% "bittydb" % "0.1"
+	libraryDependencies += "xyz.hyperreal" %% "bittydb" % "0.2"
 
 	
 ## Building
 
 ### Requirements
 
-- SBT 13.8+
+- SBT 13.15+
 - Java 8+
 
 ### Clone and build
