@@ -2,7 +2,8 @@ package xyz.hyperreal.bittydb
 
 
 trait IOConstants {
-	val NULL =			0x00
+	val NULL =			0x00	// JVM null
+	val NSTRING =		0X01	// empty (null) string
 	val BOOLEAN =		0x10
 	val FALSE =			BOOLEAN|0
 	val TRUE =			BOOLEAN|1

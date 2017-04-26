@@ -16,7 +16,7 @@ object IO {
 
 abstract class IO extends IOConstants {
 	private [bittydb] var charset = UTF_8
-	private [bittydb] var bwidth = IO.bwidth_default					// big (i.e. pointers, sizes) width (2 minimum)
+	private [bittydb] var bwidth = IO.bwidth_default					// big integer (i.e. pointers, sizes) width (2 minimum)
 	private [bittydb] var cwidth = IO.cwidth_default					// cell width
 	private [bittydb] var bucketsPtr: Long = _
 	private [bittydb] var buckets: Array[Long] = _
@@ -240,6 +240,7 @@ abstract class IO extends IOConstants {
 		val res =
 			getType match {
 				case NULL => null
+				case NSTRING => ""
 				case FALSE => false
 				case TRUE => true
 				case BYTE => getByte
@@ -277,6 +278,9 @@ abstract class IO extends IOConstants {
 		v match {
 			case null =>
 				putByte( NULL )
+				pad( cwidth )
+			case "" =>
+				putByte( NSTRING )
 				pad( cwidth )
 			case b: Boolean =>
 				putBoolean( b )
