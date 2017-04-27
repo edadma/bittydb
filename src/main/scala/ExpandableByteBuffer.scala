@@ -42,13 +42,15 @@ class ExpandableByteBuffer
 	
 	def putting( bytes: Int ) = sizeHint( _buffer.position + bytes )
 	
-	def sizeHint( len: Int ) {
-		if (len > array.length && len >= 1) {
-			val newarray = allocate( len*2 )
+	def sizeHint( hint: Int ) {
+		if (hint > array.length && hint >= 1) {
+			val newarray = allocate( array.length*2 )
+
 			compat.Platform.arraycopy( array, 0, newarray, 0, _size )
 			array = newarray
 		}
-		
-		_size = _size max len
+
+		if (hint > _size)
+			_size = hint
 	}
 }

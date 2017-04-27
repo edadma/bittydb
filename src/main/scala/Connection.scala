@@ -41,14 +41,12 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 	private [bittydb] var uuidOption = true
 	
 	if (io.size == 0) {
-		version = VERSION
+		version = FORMAT_VERSION
 		io putByteString "BittyDB"
 		io putByteString version
-		
-		val optMap = HashMap[Symbol, Any]( options: _* )
-		
-		for (opt <- Seq('charset, 'bwidth, 'cwidth, 'uuid) if optMap contains opt) {
-			(opt, optMap(opt)) match {
+
+		for (opt <- options)
+			opt match {
 				case ('charset, cs: String) =>
 					io.charset = Charset.forName( cs )
 				case ('bwidth, n: Int) =>
@@ -60,28 +58,23 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 					if (io.bwidth <= n && n <= 255)
 						io.cwidth = n
 					else
-						sys.error( "'cwidth' is at between 'bwidth' and 255 (inclusive)" )
+						sys.error( "'cwidth' is between 'bwidth' and 255 (inclusive)" )
 				case ('uuid, on: Boolean) => uuidOption = on
+				case (Symbol( o ), _) => sys.error( s"unknown option '$o'" )
 			}
-			
-			optMap -= opt
-		}
 
-		optMap.keys.headOption match {
-			case None =>
-			case Some( k ) => sys.error( s"invalid option: '$k'" )
-		}
-		
 		io putByteString io.charset.name
 		io putByte io.bwidth
 		io putByte io.cwidth
 		io putBoolean uuidOption
-		
 		io.bucketsPtr = io.pos
 		io.buckets = Array.fill( io.bucketLen )( NUL )
-		for (b <- io.buckets) io putBig b
+
+		for (b <- io.buckets)
+			io putBig b
+
 		rootPtr = io.pos
-		io putValue( Map.empty )
+		io putValue Map.empty
 		io.force
 	}
 	else
@@ -92,7 +85,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 					case _ => Connection.invalid
 				}
 				
-				if (version > VERSION)
+				if (version > FORMAT_VERSION)
 					sys.error( "attempting to read database of newer format version" )
 					
 				io.getByteString match {
@@ -123,6 +116,8 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 //	def apply( name: String ) = new Collection( root, name )
 	
 	def close = io.close
+
+	def length = io.size
 
 	//
 	// Map methods
@@ -235,7 +230,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 			io.finish
 		}
 	
-	def list = io.objectIterator( addr ) map {a => io.getValue( a + 1 ) -> new DBFilePointer( io.pos )} toList
+		def list = io.objectIterator( addr ) map {a => io.getValue( a + 1 ) -> new DBFilePointer( io.pos )} toList
 		
 		private [bittydb] def lookup( key: Any ): Either[Option[Long], Long] = {
 			var where: Option[Long] = None
@@ -254,7 +249,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 						else
 							io.skipValue
 					else {
-						if (where == None)
+						if (where.isEmpty)
 							where = Some( io.pos - 1 )
 							
 						io.skipValue
@@ -458,13 +453,13 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 				case _ => sys.error( "can only use 'length' for an array" )
 			}
 		
-		def cursor = io.arrayIterator( addr ) map (new Cursor( _ ))
+		def cursor = io arrayIterator addr map (new Cursor( _ ))
 		
 		def membersAs[A] = members.asInstanceOf[Iterator[A]]
 		
-		def members = cursor map (_.get)
+		def members = cursor map (_ get)
 		
-		def at( index: Int ) = new Cursor( io.arrayIterator(addr) drop (index) next )
+		def at( index: Int ) = new Cursor( io arrayIterator addr drop index next )
 		
 		def kind = io.getType( addr )
 		

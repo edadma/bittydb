@@ -7,7 +7,7 @@ import java.time.{Instant, OffsetDateTime}
 package object bittydb {
 //	val logger = LoggerFactory.getLogger( classOf[Connection] )
 	
-	val VERSION = "1"
+	val FORMAT_VERSION = "1"
 	
 	val logging = true
 	

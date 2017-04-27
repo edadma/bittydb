@@ -95,7 +95,15 @@ abstract class IO extends IOConstants {
 	//
 	// i/o methods based on abstract methods
 	//
-	
+
+	def getSmall: Int = (getByte << 16) | (getUnsignedByte << 8) | getUnsignedByte
+
+	def putSmall( a: Int ): Unit = {
+		putByte( a >> 16 )
+		putByte( a >> 8 )
+		putByte( a )
+	}
+
 	def getBig: Long = {
 		var res = 0L
 		
@@ -194,7 +202,7 @@ abstract class IO extends IOConstants {
 	
 	def putTimestamp( t: Instant ) = putLong( t.toEpochMilli )
 	
-	def getDatetime = OffsetDateTime.of( getInt, getByte, getByte, getByte, getByte, getByte, getInt, ZoneOffset.ofTotalSeconds(getInt) )
+	def getDatetime = OffsetDateTime.of( getInt, getByte, getByte, getByte, getByte, getByte, getInt, ZoneOffset.ofTotalSeconds(getSmall) )
 	
 	def putDatetime( datetime: OffsetDateTime ) = {
 		putInt( datetime.getYear )
@@ -204,7 +212,7 @@ abstract class IO extends IOConstants {
 		putByte( datetime.getMinute )
 		putByte( datetime.getSecond )
 		putInt( datetime.getNano )
-		putInt( datetime.getOffset.getTotalSeconds )
+		putSmall( datetime.getOffset.getTotalSeconds )
 	}
 	
 	def getUUID = new UUID( getLong, getLong )
@@ -351,14 +359,14 @@ abstract class IO extends IOConstants {
 				val s = encode( a )
 				val (io, p) = need(
 					s.length match {
-						case 0 => 1
+//						case 0 => 1		// handled by `case ""`
 						case l if l <= SSTRING_MAX => l
 						case l if l < 256 => l + 1
 						case l if l < 65536 => l + 2
 						case l => l + 4
 					} )
 				
-				if (s.isEmpty || s.length > SSTRING_MAX) {
+				if (/*s.isEmpty || */s.length > SSTRING_MAX) {	// `s.isEmpty` possibility handled by `case ""`
 					s.length match {
 						case l if l < 256 =>
 							io.putByte( STRING|UBYTE_LENGTH )
@@ -883,7 +891,7 @@ abstract class IO extends IOConstants {
 	}
 	
 	def finish {
-		if (!allocs.isEmpty)
+		if (allocs.nonEmpty)
 		{
 			append
 			appendbase = pos

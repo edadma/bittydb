@@ -42,7 +42,13 @@ class Collection( parent: Connection#Pointer, name: String ) extends IOConstants
 			parent.set( name, Nil )
 			c = parent( name )
 		}
-	
+
+	def iterator = c.members
+
+	def list = iterator.toList
+
+	def set = iterator.toSet
+
 	def filter( query: Map[_, _] ) = {
 		check
 		c.cursor filter {
@@ -53,7 +59,7 @@ class Collection( parent: Connection#Pointer, name: String ) extends IOConstants
 					query forall {
 						case (k, op: Map[String, Any]) if op.keysIterator forall (QUERY_PREDICATES contains _) =>
 							op.head match {
-								case ("$eq", v) => d get k exists (_ == v)
+								case ("$eq", v) => d get k contains v
 								case ("$ne", v) => d get k exists (_ != v)
 								case ("$lt", v) => d get k exists (Math.predicate( '<, _, v ))
 								case ("$lte", v) => d get k exists (Math.predicate( '<=, _, v ))
@@ -63,7 +69,7 @@ class Collection( parent: Connection#Pointer, name: String ) extends IOConstants
 								case ("$nin", v: Seq[Any]) => d get k exists (!v.contains(_))
 							}
 						case (k, v) =>
-							d get k exists (_ == v)
+							d get k contains v
 					}
 				}
 		}

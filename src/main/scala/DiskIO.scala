@@ -73,11 +73,11 @@ class DiskIO( f: File ) extends IO
 	
 	def writeByteChars( s: String ) = file.writeBytes( s )
 	
-	def writeBuffer( buf: MemIO ) {
-		if (buf.size > Int.MaxValue)
+	def writeBuffer( io: MemIO ) {
+		if (io.size > Int.MaxValue)
 			sys.error( "too big" )
-			
-		file.write( buf.db.buffer.array, 0, buf.db.size.asInstanceOf[Int] )
+
+		file.write( io.buf.buffer.array, 0, io.buf.size )
 	}
 	
 	override def toString = f.toString
