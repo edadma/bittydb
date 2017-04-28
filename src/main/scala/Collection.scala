@@ -47,6 +47,8 @@ class Collection( parent: Connection#Pointer, name: String ) extends IOConstants
 
 	def list = iterator.toList
 
+		//iterator.toList
+
 	def set = iterator.toSet
 
 	def filter( query: Map[_, _] ) = {

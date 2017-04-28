@@ -5,14 +5,15 @@ Internal Types
 --------------
 
 - NULL = 0x00
+- NSTRING = 0x01
 - BOOLEAN = 0x10
-- FALSE = BOOLEAN|0
-- TRUE = BOOLEAN|1
+	- FALSE = BOOLEAN|0
+	- TRUE = BOOLEAN|1
 - INTEGER = 0x20
-- BYTE = INTEGER|0
-- SHORT = INTEGER|1
-- INT = INTEGER|2
-- LONG = INTEGER|3
+	- BYTE = INTEGER|0
+	- SHORT = INTEGER|1
+	- INT = INTEGER|2
+	- LONG = INTEGER|3
 - BIGINT = 0x30
 - DOUBLE = 0x50
 - DECIMAL = 0x60
@@ -25,16 +26,25 @@ Internal Types
 	- ENCODING_INCLUDED = 4
 - UUID = 0x90
 - OBJECT = 0xA0
-- EMPTY = OBJECT|0
-- MEMBERS = OBJECT|1
+	- EMPTY = OBJECT|0
+	- MEMBERS = OBJECT|1
 - ARRAY = 0xB0
-- NIL = ARRAY|0
-- ELEMENTS = ARRAY|1
+	- NIL = ARRAY|0
+	- ELEMENTS = ARRAY|1
 - POINTER = 0xC0
 - TIMESTAMP = 0xD0
 - DATETIME = 0xE0
 
 Internal types can be divided into *composite* or *basic* depending on whether they are built out of other types or not.  The composite types are OBJECT and ARRAY.  All other types are basic, except for POINTER which is in a class by itself.  Some basic types are *simple* in the sense that they only require their type and no other value data to be stored.  The simple types are NULL, BOOLEAN (TRUE/FALSE), single character strings (SSTRING of one character), EMPTY, and NIL.
+
+
+Special Values
+--------------
+
+- NUL = 0x00 (null pointer usually signifying end of a chain)
+- USED = 0x00 (signifying that a pair or array element is in use, meaning not deleted)
+- UNUSED = 0x01 (signifying that a pair or array element is unused, meaning deleted)
+
 
 Header
 ------
@@ -84,6 +94,6 @@ Each chunk of an object has the layout:
 Field        | Contents         | Default | Description
 -----        | --------         | ------- | -----------
 next pointer | *p*              | `NUL`   | *p* points to the next chunk; if this is the last chunk, *p* is NUL
-size         | *s*              |         | *s* is the total size in bytes of all the pairs including pairs that are marked as removed
+size         | *s*              |         | *s* is the total size in bytes of all the pairs in this chunk including pairs that are marked as removed
 pair         | *u* *k* *v*      |         | *u* is 0x00 if this pair has not been removed, 0x01 otherwise; *k* and *v* are a key/value pair - keys are encoded the same way as values
 ...          | ...              |         | other pairs if they exist

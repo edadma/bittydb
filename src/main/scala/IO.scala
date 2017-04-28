@@ -637,62 +637,47 @@ abstract class IO extends IOConstants {
 					var cont: Long = _
 					var chunksize: Long = _
 					var cur: Long = _
-					var scan = false
 					var done = false
-					
+
 					chunk( first )
-					
+					nextused
+
 					private def chunk( p: Long ) {
 						cont = getBig( p )
 						chunksize = getBig
 						cur = pos
 					}
-					
-					def hasNext = {
-						def advance = {
-							chunksize -= ewidth
-							
-							if (chunksize == 0)
-								if (cont == NUL) {
-									done = true
-									false
-								} else {
-									chunk( cont )
-									true
-								}
+
+					private def nextused {
+						if (chunksize == 0)
+							if (cont == NUL)
+								done = true
 							else {
+								chunk( cont )
+								nextused
+							}
+						else {
+							chunksize -= ewidth
+
+							if (getByte( cur ) == UNUSED) {
 								cur += ewidth
-								true
+								nextused
 							}
 						}
-
-						def nextused: Boolean =
-							if (advance)
-								if (getByte( cur ) == USED)
-									true
-								else
-									nextused
-							else
-								false
-						
-						if (done)
-							false
-						else if (scan)
-							if (nextused) {
-								scan = false
-								true
-							} else
-								false
-						else
-							true
 					}
-					
+
+					def hasNext = !done
+
 					def next =
-						if (hasNext) {
-							scan = true
-							cur
-						} else
+						if (done)
 							throw new NoSuchElementException( "next on empty arrayIterator" )
+						else {
+							val res = cur
+
+							cur += ewidth
+							nextused
+							res
+						}
 				}
 			case _ => sys.error( "can only use 'arrayIterator' for an array" )
 		}

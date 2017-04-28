@@ -461,7 +461,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 		
 		def at( index: Int ) = new Cursor( io arrayIterator addr drop index next )
 		
-		def kind = io.getType( addr )
+		def kind = io getType addr
 		
 		override def toString =
 			kind match {
