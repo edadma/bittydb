@@ -359,13 +359,13 @@ abstract class IO extends IOConstants {
 				val s = encode( a )
 				val (io, p) = need(
 					s.length match {
-						case l if l <= SSTRING_MAX => l
+						case l if l <= cwidth => l
 						case l if l < 256 => l + 1
 						case l if l < 65536 => l + 2
 						case l => l + 4
 					} )
 				
-				if (s.length > SSTRING_MAX) {
+				if (s.length > cwidth) {
 					s.length match {
 						case l if l < 256 =>
 							io.putByte( STRING|UBYTE_LENGTH )
@@ -819,11 +819,11 @@ abstract class IO extends IOConstants {
 	def bucketPtr( bucketIndex: Int ) = bucketIndex*bwidth + bucketsPtr
 	
 	def dealloc( p: Long ) {
-		val bind = getByte( p - 1 )
+		val ind = getByte( p - 1 )
 		
-		putBig( p, buckets(bind) )
-		buckets(bind) = p
-		putBig( bucketPtr(bind), p )
+		putBig( p, buckets(ind) )
+		buckets(ind) = p
+		putBig( bucketPtr(ind), p )
 	}
 	
 	def alloc = {

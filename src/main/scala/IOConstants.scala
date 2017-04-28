@@ -34,8 +34,7 @@ trait IOConstants {
 	val USHORT_LENGTH = 1
 	val INT_LENGTH = 2
 	val ENCODING_INCLUDED = 4
-	val SSTRING_MAX = 16
-	
+
 	val DATETIME_WIDTH = 16
 
 	val NUL = 0					// null pointer value

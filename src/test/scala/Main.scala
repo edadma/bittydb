@@ -7,9 +7,11 @@ import util.Random._
 object Main extends App {
 
 	val db = Connection.mem( 'uuid -> false, 'bwidth -> 2, 'cwidth -> 3 )
-	val coll = db( "test" )
-	val m = Map("aaaaaaaa" -> 1)
+	val coll = db( "DB" )
+	val m = Map("aaaaaaa" -> 1)
 	val n = Map("aaaa" -> 1)
+
+	db.io.dump
 
 	for (_ <- 1 to 1)
 		coll insert m
@@ -28,22 +30,9 @@ object Main extends App {
 	try {
 		println(coll.list)
 	} catch {
-		case e: Exception => println( e )
+		case e: Throwable => println( e )
 	}
 
 	db.close
-
-	def rndAlpha = new String( Array.fill( nextInt(15) )((nextInt('z' - 'a') + 'a').toChar) )
-
-	def rndObject = {
-		val res =
-			Map(
-				(for (_ <- 0 to nextInt(1))
-					yield
-						rndAlpha -> nextInt(Int.MaxValue)): _*)
-
-		println( res )
-		res
-	}
 
 }
