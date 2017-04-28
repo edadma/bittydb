@@ -40,6 +40,6 @@ trait IOConstants {
 
 	val NUL = 0					// null pointer value
 
-	val USED = 0
-	val UNUSED = 1
+	val USED = 0xFF
+	val UNUSED = 0xEE
 }

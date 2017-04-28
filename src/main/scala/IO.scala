@@ -312,7 +312,7 @@ abstract class IO extends IOConstants {
 			case a: Long if a.isValidByte =>
 				putByte( BYTE )
 				putByte( a.asInstanceOf[Int] )
-				pad( 7 )
+				pad( cwidth - 1 )
 			case a: Long if a.isValidShort =>
 				val (io, p) = need( 2 )
 				
@@ -359,14 +359,13 @@ abstract class IO extends IOConstants {
 				val s = encode( a )
 				val (io, p) = need(
 					s.length match {
-//						case 0 => 1		// handled by `case ""`
 						case l if l <= SSTRING_MAX => l
 						case l if l < 256 => l + 1
 						case l if l < 65536 => l + 2
 						case l => l + 4
 					} )
 				
-				if (/*s.isEmpty || */s.length > SSTRING_MAX) {	// `s.isEmpty` possibility handled by `case ""`
+				if (s.length > SSTRING_MAX) {
 					s.length match {
 						case l if l < 256 =>
 							io.putByte( STRING|UBYTE_LENGTH )
@@ -391,7 +390,7 @@ abstract class IO extends IOConstants {
 				pad( cwidth )
 			case a: collection.Map[_, _] =>
 				putByte( POINTER )
-		
+
 				val io = allocPad
 				
 				io.putByte( MEMBERS )
@@ -401,7 +400,7 @@ abstract class IO extends IOConstants {
 				pad( cwidth )
 			case a: collection.TraversableOnce[_] =>
 				putByte( POINTER )
-		
+
 				val io = allocPad
 				
 				io.putByte( ELEMENTS )
@@ -429,7 +428,7 @@ abstract class IO extends IOConstants {
 			val start = pos
 
 			while (pos - start < len) {
-				if (getByte == USED)
+				if (getUnsignedByte == USED)
 					map += getValue -> getValue
 				else {
 					skipValue
@@ -496,7 +495,7 @@ abstract class IO extends IOConstants {
 			val start = pos
 
 			while (pos - start < len) {
-				if (getByte == USED)
+				if (getUnsignedByte == USED)
 					buf += getValue
 				else
 					skipValue
@@ -591,7 +590,7 @@ abstract class IO extends IOConstants {
 
 						def nextused: Boolean =
 							if (advance)
-								if (getByte( cur ) == USED)
+								if (getUnsignedByte( cur ) == USED)
 									true
 								else
 									nextused
@@ -659,7 +658,7 @@ abstract class IO extends IOConstants {
 						else {
 							chunksize -= ewidth
 
-							if (getByte( cur ) == UNUSED) {
+							if (getUnsignedByte( cur ) == UNUSED) {
 								cur += ewidth
 								nextused
 							}
@@ -718,13 +717,14 @@ abstract class IO extends IOConstants {
 			
 			pos = mark
 			
-			for (i <- line until ((line + width) min size))
-				printChar( getByte.asInstanceOf[Int] )
+			for (_ <- line until ((line + width) min size))
+				printChar( getByte )
 				
 			println
 		}
 		
 		pos = cur
+		println
 	}
 
 	def skip( len: Long ) = pos += len

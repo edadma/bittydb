@@ -1,58 +1,49 @@
 package xyz.hyperreal.bittydb
 
-import scala.collection.mutable.ArrayBuffer
+import collection.mutable.ArrayBuffer
 import util.Random._
 
 
 object Main extends App {
 
-	val db = Connection.mem( 'uuid -> false )
+	val db = Connection.mem( 'uuid -> false, 'bwidth -> 2, 'cwidth -> 3 )
 	val coll = db( "test" )
-	val array = new ArrayBuffer[Map[String, Any]]
+	val m = Map("aaaaaaaa" -> 1)
+	val n = Map("aaaa" -> 1)
+
+	for (_ <- 1 to 1)
+		coll insert m
+
+	db.io.dump
+	println( coll.list )
+	coll remove m
+	db.io.dump
+	println( coll.list )
+
+	for (_ <- 1 to 1)
+		coll insert n
 
 	db.io.dump
 
-	for (_ <- 1 to 1) {
-		val m = Map("aaaaaaaaa" -> 0x55aa55aa)//rndObject
-
-		coll.insert( m )
-		array += m
+	try {
+		println(coll.list)
+	} catch {
+		case e: Exception => println( e )
 	}
-
-	db.io.dump
-	println( coll.set == array.toSet )
-	println( db.length )
-
-	for (_ <- 1 to 1) {
-		val ind = nextInt( array.length )
-		val doc = array( ind )
-
-		array remove ind
-		coll remove doc
-	}
-
-	println( coll.set == array.toSet )
-	println( db.length )
-
-//	for (_ <- 1 to 1) {
-//		val m = Map("aaaaaaaaaaaaaaa" -> 0x55aa55aa)//rndObject
-//
-//		println( m )
-//		coll.insert( m )
-//		array += m
-//	}
-//
-//	println( coll.set == array.toSet )
-//	println( db.length )
 
 	db.close
 
-	def rndAlpha = new String( Array.fill( nextInt(17) )((nextInt('z' - 'a') + 'a').toChar) )
+	def rndAlpha = new String( Array.fill( nextInt(15) )((nextInt('z' - 'a') + 'a').toChar) )
 
-	def rndObject = //Map( "abababababababab" -> 0x5a5a5a5a )
-		Map(
-			(for (_ <- 0 to nextInt( 1 ))
-				yield
-					rndAlpha -> nextInt( Int.MaxValue )): _* )
+	def rndObject = {
+		val res =
+			Map(
+				(for (_ <- 0 to nextInt(1))
+					yield
+						rndAlpha -> nextInt(Int.MaxValue)): _*)
+
+		println( res )
+		res
+	}
 
 }

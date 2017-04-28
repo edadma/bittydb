@@ -151,7 +151,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 		}
 
 		override def get =
-			if (io.getByte( elem ) == UNUSED)
+			if (io.getUnsignedByte( elem ) == UNUSED)
 				sys.error( "element has been removed" )
 			else
 				super.get
@@ -243,7 +243,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 				while (io.pos - start < len) {
 					val addr = io.pos
 					
-					if (io.getByte == USED)
+					if (io.getUnsignedByte == USED)
 						if (io.getValue == key)
 							return Some( addr )
 						else
