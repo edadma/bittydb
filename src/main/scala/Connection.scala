@@ -46,22 +46,22 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 			opt match {
 				case ('charset, cs: String) =>
 					io.charset = Charset.forName( cs )
-				case ('bwidth, n: Int) =>
+				case ('pwidth, n: Int) =>
 					if (1 <= n && n <= 8)
-						io.bwidth = n
+						io.pwidth = n
 					else
-						sys.error( "'bwidth' is between 1 and 8 (inclusive)" )
+						sys.error( "'pwidth' is between 1 and 8 (inclusive)" )
 				case ('cwidth, n: Int) =>
-					if (io.bwidth <= n && n <= 255)
+					if (io.pwidth <= n && n <= 255)
 						io.cwidth = n
 					else
-						sys.error( "'cwidth' is between 'bwidth' and 255 (inclusive)" )
+						sys.error( "'cwidth' is between 'pwidth' and 255 (inclusive)" )
 				case ('uuid, on: Boolean) => io.uuidOption = on
 				case (Symbol( o ), _) => sys.error( s"unknown option '$o'" )
 			}
 
 		io putByteString io.charset.name
-		io putByte io.bwidth
+		io putByte io.pwidth
 		io putByte io.cwidth
 		io putBoolean io.uuidOption
 		io.bucketsPtr = io.pos
@@ -91,12 +91,12 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 				}
 				
 				io.getByte match {
-					case n if 1 <= n && n <= 8 => io.bwidth = n
+					case n if 1 <= n && n <= 8 => io.pwidth = n
 					case _ => Connection.invalid
 				}
 				
 				io.getUnsignedByte match {
-					case n if io.bwidth <= n && n <= 255 => io.cwidth = n
+					case n if io.pwidth <= n && n <= 255 => io.cwidth = n
 					case _ => Connection.invalid
 				}
 				
@@ -310,9 +310,9 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 						
 					io.skipBig
 					
-					val res = io.pos + io.bwidth + io.getBig == io.size
+					val res = io.pos + io.pwidth + io.getBig == io.size
 					
-					io.pos -= 2*io.bwidth
+					io.pos -= 2*io.pwidth
 					res
 				case STRING => sys.error( "not yet" )
 				case BIGINT => sys.error( "not yet" )
@@ -393,19 +393,19 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 // 						io.addBig( sizeptr, count*io.ewidth )
 // 						io.addBig( header, count )
 // 					} else {
-						io.getBig( header + 2*io.bwidth ) match {
+						io.getBig( header + 2*io.pwidth ) match {
 							case NUL =>
 							case last => io.pos = last
 						}
 						
 						io.inert {
-							if (io.getBig( header + io.bwidth ) == NUL)
-								io.putBig( header + io.bwidth, header + 3*io.bwidth )
+							if (io.getBig( header + io.pwidth ) == NUL)
+								io.putBig( header + io.pwidth, header + 3*io.pwidth )
 						}
 						
 						val cont = io.allocPad
 						
-						cont.backpatch( io, header + 2*io.bwidth )
+						cont.backpatch( io, header + 2*io.pwidth )
 						cont.putArrayChunk( s, io, header )
 // 					}
 				case _ => sys.error( "can only use 'append' for an array" )
@@ -425,14 +425,14 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 					io.skipBig
 					
 					val first = io.getBig match {
-						case NUL => header + 3*io.bwidth
+						case NUL => header + 3*io.pwidth
 						case p => p
 					}
 					
 					if (io.getBig == NUL)
-						io.putBig( io.pos - io.bwidth, header + 3*io.bwidth )
+						io.putBig( io.pos - io.pwidth, header + 3*io.pwidth )
 						
-					io.pos = header + io.bwidth
+					io.pos = header + io.pwidth
 					
 					val cont = io.allocPad
 					

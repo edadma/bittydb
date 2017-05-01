@@ -10,7 +10,7 @@ class AllocIO( io: IO ) extends MemIO {
 	private [bittydb] lazy val bucket = java.lang.Long.numberOfTrailingZeros(bitCeiling(size) max lowestSize) - sizeShift
 	
 	charset = io.charset
-	bwidth = io.bwidth
+	pwidth = io.pwidth
 	cwidth = io.cwidth
 	
 	def backpatch( io: IO, src: Long ) =

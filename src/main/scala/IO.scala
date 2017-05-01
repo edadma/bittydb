@@ -10,26 +10,26 @@ import collection.mutable.{ArrayStack, ListBuffer}
 
 
 object IO {
-	private [bittydb] var bwidth_default = 5
+	private [bittydb] var pwidth_default = 5
 	private [bittydb] var cwidth_default = 8
 }
 
 abstract class IO extends IOConstants {
 	private [bittydb] var charset = UTF_8
-	private [bittydb] var bwidth = IO.bwidth_default					// big integer (i.e. pointers, sizes) width (2 minimum)
+	private [bittydb] var pwidth = IO.pwidth_default					// pointer width
 	private [bittydb] var cwidth = IO.cwidth_default					// cell width
 	private [bittydb] var bucketsPtr: Long = _
 	private [bittydb] var buckets: Array[Long] = _
 	private [bittydb] var uuidOption: Boolean = true
 
-	private [bittydb] lazy val vwidth = 1 + cwidth					// value width
-	private [bittydb] lazy val pwidth = 1 + 2*vwidth 					// pair width
-	private [bittydb] lazy val ewidth = 1 + vwidth
+	private [bittydb] lazy val vwidth = 1 + cwidth						// value width
+	private [bittydb] lazy val twidth = 1 + 2*vwidth 					// pair width
+	private [bittydb] lazy val ewidth = 1 + vwidth						// element width
 	private [bittydb] lazy val lowestSize = bitCeiling( vwidth + 1 ).toInt		// smallest allocation block needed
 	private [bittydb] lazy val sizeShift = Integer.numberOfTrailingZeros( lowestSize )
-	private [bittydb] lazy val bucketLen = bwidth*8 - sizeShift
+	private [bittydb] lazy val bucketLen = pwidth*8 - sizeShift
 	
-//	println( bwidth, lowestSize, sizeShift, bucketLen )
+//	println( pwidth, lowestSize, sizeShift, bucketLen )
 
 	//
 	// abstract methods
@@ -108,7 +108,7 @@ abstract class IO extends IOConstants {
 	def getBig: Long = {
 		var res = 0L
 		
-		for (_ <- 1 to bwidth) {
+		for (_ <- 1 to pwidth) {
 			res <<= 8
 			res |= getUnsignedByte
 		}
@@ -117,7 +117,7 @@ abstract class IO extends IOConstants {
 	}
 
 	def putBig( l: Long ) {
-		for (shift <- (bwidth - 1)*8 to 0 by -8)
+		for (shift <- (pwidth - 1)*8 to 0 by -8)
 			putByte( (l >> shift).asInstanceOf[Int] )
 	}
 	
@@ -229,8 +229,10 @@ abstract class IO extends IOConstants {
 			case FALSE => false
 			case _ => sys.error( "invalid boolean value" )
 		}
-	
-	def putBoolean( a: Boolean ) = putByte( if (a) TRUE else FALSE )
+
+	private def bool2int( a: Boolean ) = if (a) TRUE else FALSE
+
+	def putBoolean( a: Boolean ) = putByte( bool2int(a) )
 	
 	object Type1 {
 		def unapply( t: Int ): Option[(Int, Int)] = {
@@ -449,7 +451,7 @@ abstract class IO extends IOConstants {
 	}
 	
 	def putObject( m: collection.Map[_, _] ) {
-		padBig//putBig( pos + bwidth )	// last chunk pointer
+		padBig//putBig( pos + pwidth )	// last chunk pointer
 		putObjectChunk( m )
 	}
 	
@@ -468,7 +470,7 @@ abstract class IO extends IOConstants {
 		for (p <- m)
 			putPair( p )
 	
-		putBig( start, pos - start - bwidth )
+		putBig( start, pos - start - pwidth )
 	}
 	
 	def putPair( kv: (Any, Any) ) {
@@ -542,7 +544,7 @@ abstract class IO extends IOConstants {
 			count += 1
 		}
 	
-		putBig( start, pos - start - bwidth )
+		putBig( start, pos - start - pwidth )
 		lengthio.addBig( lengthptr, count )
 	}
 
@@ -563,7 +565,7 @@ abstract class IO extends IOConstants {
 					var scan = false
 					var done = false
 					
-					chunk( header + bwidth )
+					chunk( header + pwidth )
 					
 					private def chunk( p: Long ) {
 						cont = getBig( p )
@@ -573,7 +575,7 @@ abstract class IO extends IOConstants {
 					
 					def hasNext = {
 						def advance = {
-							chunksize -= pwidth
+							chunksize -= twidth
 							
 							if (chunksize == 0)
 								if (cont == NUL) {
@@ -584,7 +586,7 @@ abstract class IO extends IOConstants {
 									true
 								}
 							else {
-								cur += pwidth
+								cur += twidth
 								true
 							}
 						}
@@ -629,7 +631,7 @@ abstract class IO extends IOConstants {
 				skipBig
 				
 				val first = getBig match {
-					case NUL => header + 3*bwidth
+					case NUL => header + 3*pwidth
 					case p => p
 				}
 				
@@ -746,36 +748,65 @@ abstract class IO extends IOConstants {
 
 		def pop = stack.pop
 
-		def checkcond( c: Boolean, msg: String ) =
+		def checkcond( c: Boolean, msg: String, adjust: Int = 0 ) = {
+			if (adjust != 0)
+				skip( adjust )
+
 			if (!c)
-				problem( msg )
+				problem(msg)
+
+			if (adjust != 0)
+				skip( -adjust )
+		}
 
 		def checkbytes( n: Int ): Unit = {
 			checkcond( size >= pos + n, (pos + n - size) + " past end" )
 		}
 
-		def checkbyte = checkbytes( 1 )
+		def checkubyte = {
+			checkbytes( 1 )
+			getUnsignedByte
+		}
 
-		def checkByteString: Unit = {
-			checkbyte
-
-			val l = getUnsignedByte
+		def checkbytestring: Unit = {
+			val l = checkubyte
 
 			checkcond( l > 0, s"byte string size should be positive: $l" )
 			checkbytes( l )
 			skip( l )
 		}
 
+		def checkbyterange( from: Int, to: Int ) = {
+			val b = checkubyte
+
+			checkcond( from <= b && b <= to, s"byte out of range: $from to $to" )
+			println( b, pwidth)
+			b
+		}
+
 		pos = 0
 		push( "file header" )
 		push( "file type" )
-		checkByteString
+		checkbytestring
+		pop
+		push( "format version" )
+		checkbytestring
+		pop
+		push( "charset" )
+		checkbytestring
 		pop
 		push( "pointer width" )
+		checkcond( checkbyterange(1, 8) == pwidth, "changed", -1 )
+		pop
+		push( "cell width" )
+		checkcond( checkbyterange(1, 16) == cwidth, "changed", -1 )
+		pop
+		push( "uuid" )
+		checkcond( checkbyterange(FALSE, TRUE) == bool2int(uuidOption), "changed", -1 )
 		pop
 		pop
 	}
-	
+
 	def skip( len: Long ) = pos += len
 	
 	def skipByte = pos += 1
@@ -790,7 +821,7 @@ abstract class IO extends IOConstants {
 			skipByte( getBig )
 	}
 	
-	def skipBig = skip( bwidth )
+	def skipBig = skip( pwidth )
 	
 	def skipInt = skip( 4 )
 	
@@ -804,7 +835,7 @@ abstract class IO extends IOConstants {
 		for (_ <- 1L to n)
 			putByte( 0 )
 			
-	def padBig = pad( bwidth )
+	def padBig = pad( pwidth )
 	
 	def padCell = pad( cwidth )
 	
@@ -865,7 +896,7 @@ abstract class IO extends IOConstants {
 		}
 	}
 	
-	def bucketPtr( bucketIndex: Int ) = bucketIndex*bwidth + bucketsPtr
+	def bucketPtr( bucketIndex: Int ) = bucketIndex*pwidth + bucketsPtr
 	
 	def dealloc( p: Long ) {
 		val ind = getByte( p - 1 )
