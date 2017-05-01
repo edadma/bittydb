@@ -2,11 +2,10 @@ package xyz.hyperreal.bittydb
 
 import java.io.File
 import java.nio.charset.Charset
-import java.util.NoSuchElementException
 
 import util.Either
-import collection.{TraversableOnce, AbstractIterator, Map => CMap}
-import collection.mutable.{HashMap, AbstractMap}
+import collection.{TraversableOnce, Map => CMap}
+import collection.mutable.AbstractMap
 
 import xyz.hyperreal.lia.Math
 
@@ -37,9 +36,7 @@ class InvalidDatabaseException extends Exception( "invalid database" )
 class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) extends AbstractMap[String, Collection] with IOConstants {
 	private [bittydb] var version: String = _
 	private [bittydb] var rootPtr: Long = _
-	
-	private [bittydb] var uuidOption = true
-	
+
 	if (io.size == 0) {
 		version = FORMAT_VERSION
 		io putByteString "BittyDB"
@@ -59,14 +56,14 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 						io.cwidth = n
 					else
 						sys.error( "'cwidth' is between 'bwidth' and 255 (inclusive)" )
-				case ('uuid, on: Boolean) => uuidOption = on
+				case ('uuid, on: Boolean) => io.uuidOption = on
 				case (Symbol( o ), _) => sys.error( s"unknown option '$o'" )
 			}
 
 		io putByteString io.charset.name
 		io putByte io.bwidth
 		io putByte io.cwidth
-		io putBoolean uuidOption
+		io putBoolean io.uuidOption
 		io.bucketsPtr = io.pos
 		io.buckets = Array.fill( io.bucketLen )( NUL )
 
@@ -103,7 +100,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 					case _ => Connection.invalid
 				}
 				
-				uuidOption = io.getBoolean
+				io.uuidOption = io.getBoolean
 				
 				io.bucketsPtr = io.pos
 				io.buckets = (for (_ <- 1 to io.bucketLen) yield io.getBig).toArray
@@ -123,7 +120,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 	// Map methods
 	//
 	
-	def get( key: String ): Option[Collection] = if (root.key( key ) == None) None else Some( default(key) )
+	def get( key: String ): Option[Collection] = if (root.key(key).isEmpty) None else Some( default(key) )
 	
 	def iterator: Iterator[(String, Collection)] =
 		io.objectIterator( rootPtr ) map {
@@ -215,7 +212,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 				case m: CMap[_, _] if addr == rootPtr && m.isEmpty =>
 					io.size = rootPtr
 					io.pos = io.size
-					io putValue( Map.empty )
+					io putValue Map.empty
 				case m: CMap[_, _] if addr == rootPtr =>
 					io.size = rootPtr
 					io.pos = io.size
@@ -361,7 +358,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 							io.putPair( insertion, kv )
 							io.finish
 							false
-						case Right( at ) =>
+						case Right( _ ) =>
 							io.putValue( kv._2 )
 							io.finish
 							true

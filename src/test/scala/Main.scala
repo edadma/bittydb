@@ -1,7 +1,7 @@
 package xyz.hyperreal.bittydb
 
-import collection.mutable.ArrayBuffer
-import util.Random._
+//import collection.mutable.ArrayBuffer
+//import util.Random._
 
 
 object Main extends App {
@@ -13,19 +13,17 @@ object Main extends App {
 
 	db.io.dump
 
-	for (_ <- 1 to 1)
-		coll insert m
-
+	coll insert m
 	db.io.dump
 	println( coll.list )
+
 	coll remove m
 	db.io.dump
 	println( coll.list )
 
-	for (_ <- 1 to 1)
-		coll insert n
-
+	coll insert n
 	db.io.dump
+	db.io.check
 
 	try {
 		println(coll.list)

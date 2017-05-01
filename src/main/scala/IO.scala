@@ -6,7 +6,7 @@ import java.time.{Instant, OffsetDateTime, ZoneOffset}
 import java.util.UUID
 
 import collection.AbstractIterator
-import collection.mutable.{ListBuffer, HashMap}
+import collection.mutable.{ArrayStack, ListBuffer}
 
 
 object IO {
@@ -20,7 +20,8 @@ abstract class IO extends IOConstants {
 	private [bittydb] var cwidth = IO.cwidth_default					// cell width
 	private [bittydb] var bucketsPtr: Long = _
 	private [bittydb] var buckets: Array[Long] = _
-	
+	private [bittydb] var uuidOption: Boolean = true
+
 	private [bittydb] lazy val vwidth = 1 + cwidth					// value width
 	private [bittydb] lazy val pwidth = 1 + 2*vwidth 					// pair width
 	private [bittydb] lazy val ewidth = 1 + vwidth
@@ -727,6 +728,54 @@ abstract class IO extends IOConstants {
 		println
 	}
 
+	def check: Unit = {
+
+		val stack = new ArrayStack[String]
+
+		def problem( msg: String ) {
+			println( s"[$pos]: $msg" )
+
+			for (item <- stack)
+				println( item )
+
+			sys.exit( 1 )
+		}
+
+		def push( item: String) : Unit =
+			stack push s"[$pos]: $item"
+
+		def pop = stack.pop
+
+		def checkcond( c: Boolean, msg: String ) =
+			if (!c)
+				problem( msg )
+
+		def checkbytes( n: Int ): Unit = {
+			checkcond( size >= pos + n, (pos + n - size) + " past end" )
+		}
+
+		def checkbyte = checkbytes( 1 )
+
+		def checkByteString: Unit = {
+			checkbyte
+
+			val l = getUnsignedByte
+
+			checkcond( l > 0, s"byte string size should be positive: $l" )
+			checkbytes( l )
+			skip( l )
+		}
+
+		pos = 0
+		push( "file header" )
+		push( "file type" )
+		checkByteString
+		pop
+		push( "pointer width" )
+		pop
+		pop
+	}
+	
 	def skip( len: Long ) = pos += len
 	
 	def skipByte = pos += 1
