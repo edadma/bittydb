@@ -742,7 +742,7 @@ abstract class IO extends IOConstants {
 		def problem( msg: String, adjust: Int = 0 ) {
 			println( f"${pos - adjust}%16x: $msg" )
 
-			for (item <- stack)
+			for ((item, _) <- stack)
 				println( item )
 
 			sys.exit( 1 )
@@ -768,7 +768,7 @@ abstract class IO extends IOConstants {
 			if (!c)
 				problem( msg, adjust )
 
-		def checkbytes( n: Int ) = checkcond( remaining >= n, (n - remaining) + " past end" )
+		def checkbytes( n: Int ) = checkcond( remaining >= n, f"${n - remaining}%x past end" )
 
 		def checkubyte = {
 			checkbytes( 1 )
@@ -777,19 +777,26 @@ abstract class IO extends IOConstants {
 
 		def checkpointer = {
 			checkbytes( pwidth )
-			getBig
+
+			val p = getBig
+
+			checkcond( 0 <= p && p < size - 1, "pointer out of range" )
+			// todo: check if pointer points to reclaimed space
+			p
 		}
 
-		def checkbytestring( s: String ): Unit = {
+		def checkbytestring( s: String ) = {
 			val l = checkubyte
 
 			checkcond( l > 0, s"byte string size should be positive: $l" )
 			checkbytes( l )
 
+			val chars = readByteChars( l )
+
 			if (s ne null)
-				checkcond( readByteChars(l) == s, "incorrect byte string" )
-			else
-				skip( l )
+				checkcond( chars == s, "incorrect byte string", l )
+
+			(chars, l + 1)
 		}
 
 		def checkbyterange( from: Int, to: Int ) = {
@@ -799,16 +806,39 @@ abstract class IO extends IOConstants {
 			b
 		}
 
-		def checkdata: Unit = {
+		def checkvalue: Unit = {
 			checkbytes( vwidth )
-			// check if we've wondered into reclaimed space
+			// todo: check if we've wondered into reclaimed space
 
 			checkubyte match {
+				case POINTER =>
+					pos = checkpointer
+					checkdata( checkubyte )
+				case t => checkdata( t )
+			}
+		}
+
+		def checkdata( t: Int ): Unit = {
+			// todo: check if allocation block is the correct size
+			t match {
 				case NULL|NSTRING|FALSE|TRUE|EMPTY|NIL|INTEGER =>
 				case BIGINT => sys.error( "BIGINT" )
 				case DOUBLE => sys.error( "DOUBLE" )
 				case Type1( SSTRING, l ) => checkcond( 0 <= l && l <= 0xF, s"small string length out of range: $l", 1 )
 				case Type2( STRING, encoding, width ) =>
+					val len =
+						width match {
+							case UBYTE_LENGTH => getUnsignedByte
+							case USHORT_LENGTH => getUnsignedShort
+							case INT_LENGTH => getInt
+						}
+
+					val (cs, css) = checkbytestring( null )
+
+					if (encoding == ENCODING_INCLUDED)
+						checkcond( Charset.isSupported(cs), s"charset not supported: $cs", css )
+
+					checkbytes( len )
 				case b => problem( f"unknown type byte: $b%02x", 1 )
 			}
 		}
@@ -846,8 +876,10 @@ abstract class IO extends IOConstants {
 			checkcond( checkpointer == buckets(i), f"pointer mismatch - bucket array has ${buckets(i)}%x", pwidth )
 
 		pop
+		pop
 
-
+		push( "root" )
+		checkvalue
 		pop
 	}
 
