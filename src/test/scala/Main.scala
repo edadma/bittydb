@@ -24,6 +24,7 @@ object Main extends App {
 
 	coll insert n
 	db.io.dump
+	db.io.check
 
 	try {
 		println(coll.list)

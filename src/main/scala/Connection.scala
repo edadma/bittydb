@@ -295,29 +295,29 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 				case _ => None
 			}
 		
-		private [bittydb] def ending =
-			io.getType( addr ) match {
-				case t@(MEMBERS|ELEMENTS) =>
-					if (t == ELEMENTS) {
-						io.skipBig
-						io.skipBig
-					}
-					
-					io.getBig match {
-						case NUL =>
-						case addr => io.pos = addr
-					}
-						
-					io.skipBig
-					
-					val res = io.pos + io.pwidth + io.getBig == io.size
-					
-					io.pos -= 2*io.pwidth
-					res
-				case STRING => sys.error( "not yet" )
-				case BIGINT => sys.error( "not yet" )
-				case DECIMAL => sys.error( "not yet" )
-			}
+//		private [bittydb] def ending =
+//			io.getType( addr ) match {
+//				case t@(MEMBERS|ELEMENTS) =>
+//					if (t == ELEMENTS) {
+//						io.skipBig
+//						io.skipBig
+//					}
+//
+//					io.getBig match {
+//						case NUL =>
+//						case addr => io.pos = addr
+//					}
+//
+//					io.skipBig
+//
+//					val res = io.pos + io.pwidth + io.getBig == io.size
+//
+//					io.pos -= 2*io.pwidth
+//					res
+//				case STRING => sys.error( "not yet" )
+//				case BIGINT => sys.error( "not yet" )
+//				case DECIMAL => sys.error( "not yet" )
+//			}
 			
 		def set( kv: (Any, Any) ) =
 			io.getType( addr ) match {

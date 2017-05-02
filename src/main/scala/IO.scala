@@ -10,8 +10,8 @@ import collection.mutable.{ArrayStack, ListBuffer}
 
 
 object IO {
-	private [bittydb] var pwidth_default = 5
-	private [bittydb] var cwidth_default = 8
+	private [bittydb] val pwidth_default = 5
+	private [bittydb] val cwidth_default = 8
 }
 
 abstract class IO extends IOConstants {
@@ -25,7 +25,7 @@ abstract class IO extends IOConstants {
 	private [bittydb] lazy val vwidth = 1 + cwidth						// value width
 	private [bittydb] lazy val twidth = 1 + 2*vwidth 					// pair width
 	private [bittydb] lazy val ewidth = 1 + vwidth						// element width
-	private [bittydb] lazy val lowestSize = bitCeiling( vwidth + 1 ).toInt		// smallest allocation block needed
+	private [bittydb] lazy val lowestSize = bitCeiling( ewidth ).toInt		// smallest allocation block needed
 	private [bittydb] lazy val sizeShift = Integer.numberOfTrailingZeros( lowestSize )
 	private [bittydb] lazy val bucketLen = pwidth*8 - sizeShift
 	
@@ -107,12 +107,12 @@ abstract class IO extends IOConstants {
 
 	def getBig: Long = {
 		var res = 0L
-		
+
 		for (_ <- 1 to pwidth) {
 			res <<= 8
 			res |= getUnsignedByte
 		}
-		
+
 		res
 	}
 
@@ -120,58 +120,58 @@ abstract class IO extends IOConstants {
 		for (shift <- (pwidth - 1)*8 to 0 by -8)
 			putByte( (l >> shift).asInstanceOf[Int] )
 	}
-	
+
 	def getBig( addr: Long ): Long = {
 		pos = addr
 		getBig
 	}
-	
+
 	def putBig( addr: Long, l: Long ) {
 		pos = addr
 		putBig( l )
 	}
-	
+
 	def addBig( a: Long ) {
 		val cur = pos
 		val v = getBig
-		
+
 		pos = cur
 		putBig( v + a )
 	}
-	
+
 	def addBig( addr: Long, a: Long ) {
 		pos = addr
 		addBig( a )
 	}
-	
+
 	def getUnsignedByte( addr: Long ): Int = {
 		pos = addr
 		getUnsignedByte
 	}
-	
+
 	def getByte( addr: Long ): Int = {
 		pos = addr
 		getByte
 	}
-	
+
 	def putByte( addr: Long, b: Int ) {
 		pos = addr
 		putByte( b )
 	}
-	
+
 	def readByteChars( len: Int ) = {
 		val buf = new StringBuilder
-		
+
 		for (_ <- 1 to len)
 			buf += getByte.asInstanceOf[Char]
-			
+
 		buf.toString
 	}
 
 	def getByteString = {
 		if (remaining >= 1) {
 			val len = getUnsignedByte
-			
+
 			if (remaining >= len)
 				Some( readByteChars(len) )
 			else
@@ -180,12 +180,12 @@ abstract class IO extends IOConstants {
 		else
 			None
 	}
-	
+
 	def putByteString( s: String ) {
 		putByte( s.length.asInstanceOf[Byte] )
 		writeByteChars( s )
 	}
-	
+
 	def getString( len: Int, cs: Charset = charset ) = new String( getBytes(len), cs )
 
 	def getType: Int =
@@ -198,13 +198,13 @@ abstract class IO extends IOConstants {
 		pos = addr
 		getType
 	}
-	
+
 	def getTimestamp = Instant.ofEpochMilli( getLong )
-	
+
 	def putTimestamp( t: Instant ) = putLong( t.toEpochMilli )
-	
+
 	def getDatetime = OffsetDateTime.of( getInt, getByte, getByte, getByte, getByte, getByte, getInt, ZoneOffset.ofTotalSeconds(getSmall) )
-	
+
 	def putDatetime( datetime: OffsetDateTime ) = {
 		putInt( datetime.getYear )
 		putByte( datetime.getMonthValue )
@@ -215,14 +215,14 @@ abstract class IO extends IOConstants {
 		putInt( datetime.getNano )
 		putSmall( datetime.getOffset.getTotalSeconds )
 	}
-	
+
 	def getUUID = new UUID( getLong, getLong )
-	
+
 	def putUUID( id: UUID ) {
 		putLong( id.getMostSignificantBits )
 		putLong( id.getLeastSignificantBits )
 	}
-	
+
 	def getBoolean =
 		getByte match {
 			case TRUE => true
@@ -233,13 +233,13 @@ abstract class IO extends IOConstants {
 	private def bool2int( a: Boolean ) = if (a) TRUE else FALSE
 
 	def putBoolean( a: Boolean ) = putByte( bool2int(a) )
-	
+
 	object Type1 {
 		def unapply( t: Int ): Option[(Int, Int)] = {
 			Some( t&0xF0, t&0x0F )
 		}
 	}
-	
+
 	object Type2 {
 		def unapply( t: Int ): Option[(Int, Int, Int)] = {
 			Some( t&0xF0, t&0x04, t&0x03 )
@@ -280,11 +280,11 @@ abstract class IO extends IOConstants {
 				case NIL => Nil
 				case ELEMENTS => getArray
 			}
-	
+
 		pos = cur + vwidth
 		res
 	}
-	
+
 	def putValue( v: Any ) {
 		v match {
 			case null =>
@@ -302,13 +302,13 @@ abstract class IO extends IOConstants {
 				pad( cwidth - 1 )
 			case a: Int if a.isValidShort =>
 				val (io, p) = need( 2 )
-				
+
 				io.putByte( SHORT )
 				io.putShort( a )
 				pad( p )
 			case a: Int =>
 				val (io, p) = need( 4 )
-				
+
 				io.putByte( INT )
 				io.putInt( a )
 				pad( p )
@@ -318,43 +318,43 @@ abstract class IO extends IOConstants {
 				pad( cwidth - 1 )
 			case a: Long if a.isValidShort =>
 				val (io, p) = need( 2 )
-				
+
 				io.putByte( SHORT )
 				io.putShort( a.asInstanceOf[Int] )
 				pad( p )
 			case a: Long if a.isValidInt =>
 				val (io, p) = need( 4 )
-				
+
 				io.putByte( INT )
 				io.putInt( a .asInstanceOf[Int] )
 				pad( p )
 			case a: Long =>
 				val (io, p) = need( 8 )
-				
+
 				io.putByte( LONG )
 				io.putLong( a )
 				pad( p )
 			case a: Instant =>
 				val (io, p) = need( 8 )
-				
+
 				io.putByte( TIMESTAMP )
 				io.putTimestamp( a )
 				pad( p )
 			case a: OffsetDateTime =>
 				val (io, p) = need( DATETIME_WIDTH )
-				
+
 				io.putByte( DATETIME )
 				io.putDatetime( a )
 				pad( p )
 			case a: UUID =>
 				val (io, p) = need( 16 )
-				
+
 				io.putByte( UUID )
 				io.putUUID( a )
 				pad( p )
 			case a: Double =>
 				val (io, p) = need( 8 )
-				
+
 				io.putByte( DOUBLE )
 				io.putDouble( a )
 				pad( p )
@@ -367,26 +367,26 @@ abstract class IO extends IOConstants {
 						case l if l < 65536 => l + 2
 						case l => l + 4
 					} )
-				
+
 				if (s.length > cwidth) {
 					s.length match {
 						case l if l < 256 =>
 							io.putByte( STRING|UBYTE_LENGTH )
 							io.putByte( l )
-						case l if l < 65536 => 
+						case l if l < 65536 =>
 							io.putByte( STRING|USHORT_LENGTH )
 							io.putShort( l )
 						case l =>
 							io.putByte( STRING|INT_LENGTH )
 							io.putInt( l )
 					}
-					
+
 					io.putBytes( s )
 				} else {
 					io.putByte( SSTRING|(s.length - 1) )
 					io.putBytes( s )
 				}
-				
+
 				pad( p )
 			case a: collection.Map[_, _] if a isEmpty =>
 				putByte( EMPTY )
@@ -395,7 +395,7 @@ abstract class IO extends IOConstants {
 				putByte( POINTER )
 
 				val io = allocPad
-				
+
 				io.putByte( MEMBERS )
 				io.putObject( a )
 			case a: collection.TraversableOnce[_] if a isEmpty =>
@@ -405,26 +405,26 @@ abstract class IO extends IOConstants {
 				putByte( POINTER )
 
 				val io = allocPad
-				
+
 				io.putByte( ELEMENTS )
 				io.putArray( a )
 			case a => sys.error( "unknown type: " + a )
 		}
 	}
-	
+
 	def getValue( addr: Long ): Any = {
 		pos = addr
 		getValue
 	}
-	
+
 	def putValue( addr: Long, v: Any ) {
 		pos = addr
 		putValue( v )
 	}
-	
+
 	def getObject = {
 		var map = Map.empty[Any, Any]
-		
+
 		def chunk {
 			val cont = getBig
 			val len = getBig
@@ -438,7 +438,7 @@ abstract class IO extends IOConstants {
 					skipValue
 				}
 			}
-			
+
 			if (cont != NUL) {
 				pos = cont
 				chunk
@@ -449,49 +449,49 @@ abstract class IO extends IOConstants {
 		chunk
 		map
 	}
-	
+
 	def putObject( m: collection.Map[_, _] ) {
 		padBig//putBig( pos + pwidth )	// last chunk pointer
 		putObjectChunk( m )
 	}
-	
+
 	def putObject( addr: Long, m: collection.Map[_, _] ) {
 		pos = addr
 		putObject( m )
 	}
-	
+
 	def putObjectChunk( m: collection.Map[_, _] ) {
 		padBig	// continuation pointer
-		
+
 		val start = pos
-	
+
 		padBig	// size of object in bytes
-		
+
 		for (p <- m)
 			putPair( p )
-	
+
 		putBig( start, pos - start - pwidth )
 	}
-	
+
 	def putPair( kv: (Any, Any) ) {
 		putByte( USED )
 		putValue( kv._1 )
 		putValue( kv._2 )
 	}
-	
+
 	def putPair( addr: Long, kv: (Any, Any) ) {
 		pos = addr
 		putPair( kv )
 	}
-	
+
 	def putElement( v: Any ) {
 		putByte( USED )
 		putValue( v )
 	}
-	
+
 	def getArray = {
 		val buf = new ListBuffer[Any]
-		
+
 		def chunk {
 			val cont = getBig
 			val len = getBig
@@ -503,7 +503,7 @@ abstract class IO extends IOConstants {
 				else
 					skipValue
 			}
-			
+
 			if (cont > 0) {
 				pos = cont
 				chunk
@@ -511,39 +511,39 @@ abstract class IO extends IOConstants {
 		}
 
 		skipBig						// skip count
-		
+
 		getBig match {				// set pos to first chunk
 			case NUL => skipBig
 			case f => pos = f
 		}
-		
+
 		chunk
 		buf.toList
 	}
-	
+
 	def putArray( s: collection.TraversableOnce[Any] ) {
 		val cur = pos
-		
+
 		padBig	// length
 		padBig	// first chunk pointer
 		padBig	// last chunk pointer
 		putArrayChunk( s, this, cur )
 	}
-	
+
 	def putArrayChunk( s: collection.TraversableOnce[Any], lengthio: IO, lengthptr: Long, contptr: Long = NUL ) {
 		putBig( contptr )	// continuation pointer
-		
+
 		val start = pos
 		var count = 0L
-		
+
 		padBig	// size of object in bytes
-		
+
 		for (e <- s) {
 			putByte( USED )
 			putValue( e )
 			count += 1
 		}
-	
+
 		putBig( start, pos - start - pwidth )
 		lengthio.addBig( lengthptr, count )
 	}
@@ -551,32 +551,32 @@ abstract class IO extends IOConstants {
 	//
 	// Iterators
 	//
-	
+
 	def objectIterator( addr: Long ): Iterator[Long] =
 		getType( addr ) match {
 			case EMPTY => Iterator.empty
 			case MEMBERS =>
 				val header = pos
-				
+
 				new AbstractIterator[Long] {
 					var cont: Long = _
 					var chunksize: Long = _
 					var cur: Long = _
 					var scan = false
 					var done = false
-					
+
 					chunk( header + pwidth )
-					
+
 					private def chunk( p: Long ) {
 						cont = getBig( p )
 						chunksize = getBig
 						cur = pos
 					}
-					
+
 					def hasNext = {
 						def advance = {
 							chunksize -= twidth
-							
+
 							if (chunksize == 0)
 								if (cont == NUL) {
 									done = true
@@ -599,7 +599,7 @@ abstract class IO extends IOConstants {
 									nextused
 							else
 								false
-						
+
 						if (done)
 							false
 						else if (scan)
@@ -611,7 +611,7 @@ abstract class IO extends IOConstants {
 						else
 							true
 					}
-					
+
 					def next =
 						if (hasNext) {
 							scan = true
@@ -621,20 +621,20 @@ abstract class IO extends IOConstants {
 				}
 			case _ => sys.error( "can only use 'objectIterator' for an object" )
 		}
-		
+
 	def arrayIterator( addr: Long ) =
 		getType( addr ) match {
 			case NIL => Iterator.empty
 			case ELEMENTS =>
 				val header = pos
-				
+
 				skipBig
-				
+
 				val first = getBig match {
 					case NUL => header + 3*pwidth
 					case p => p
 				}
-				
+
 				new AbstractIterator[Long] {
 					var cont: Long = _
 					var chunksize: Long = _
@@ -687,45 +687,45 @@ abstract class IO extends IOConstants {
 	//
 	// utility methods
 	//
-	
+
 	def remaining: Long = size - pos
-	
+
 	def atEnd = pos == size - 1
-	
+
 	def dump {
 		val cur = pos
 		val width = 16
-		
+
 		pos = 0
-		
+
 		def printByte( b: Int ) = print( "%02x ".format(b&0xFF).toUpperCase )
-		
+
 		def printChar( c: Int ) = print( if (' ' <= c && c <= '~') c.asInstanceOf[Char] else '.' )
-		
+
 		for (line <- 0L until size by width) {
 			printf( s"%10x  ", line )
-			
+
 			val mark = pos
-			
+
 			for (i <- line until ((line + width) min size)) {
 				if (i%16 == 8)
 					print( ' ' )
-					
+
 				printByte( getByte )
 			}
-			
+
 			val bytes = (pos - mark).asInstanceOf[Int]
-			
+
 			print( " "*((width - bytes)*3 + 1 + (if (bytes < 9) 1 else 0)) )
-			
+
 			pos = mark
-			
+
 			for (_ <- line until ((line + width) min size))
 				printChar( getByte )
-				
+
 			println
 		}
-		
+
 		pos = cur
 		println
 	}
@@ -735,7 +735,7 @@ abstract class IO extends IOConstants {
 		val stack = new ArrayStack[String]
 
 		def problem( msg: String ) {
-			println( s"[$pos]: $msg" )
+			println( f"$pos%16x: $msg" )
 
 			for (item <- stack)
 				println( item )
@@ -744,20 +744,17 @@ abstract class IO extends IOConstants {
 		}
 
 		def push( item: String) : Unit =
-			stack push s"[$pos]: $item"
+			stack push f"$pos%16x: $item"
 
 		def pop = stack.pop
 
-		def checkcond( c: Boolean, msg: String, adjust: Int = 0 ) = {
-			if (adjust != 0)
-				skip( adjust )
+		def checkcond( c: Boolean, msg: String, adjust: Int = 0 ) =
+			if (!c) {
+				if (adjust != 0)
+					skip( -adjust )
 
-			if (!c)
-				problem(msg)
-
-			if (adjust != 0)
-				skip( -adjust )
-		}
+				problem( msg )
+			}
 
 		def checkbytes( n: Int ): Unit = {
 			checkcond( size >= pos + n, (pos + n - size) + " past end" )
@@ -766,6 +763,11 @@ abstract class IO extends IOConstants {
 		def checkubyte = {
 			checkbytes( 1 )
 			getUnsignedByte
+		}
+
+		def checkpointer = {
+			checkbytes( pwidth )
+			getBig
 		}
 
 		def checkbytestring: Unit = {
@@ -780,7 +782,6 @@ abstract class IO extends IOConstants {
 			val b = checkubyte
 
 			checkcond( from <= b && b <= to, s"byte out of range: $from to $to" )
-			println( b, pwidth)
 			b
 		}
 
@@ -796,26 +797,35 @@ abstract class IO extends IOConstants {
 		checkbytestring
 		pop
 		push( "pointer width" )
-		checkcond( checkbyterange(1, 8) == pwidth, "changed", -1 )
+		checkcond( checkbyterange(1, 8) == pwidth, "changed", 1 )
 		pop
 		push( "cell width" )
-		checkcond( checkbyterange(1, 16) == cwidth, "changed", -1 )
+		checkcond( checkbyterange(1, 16) == cwidth, "changed", 1 )
 		pop
 		push( "uuid" )
-		checkcond( checkbyterange(FALSE, TRUE) == bool2int(uuidOption), "changed", -1 )
+		checkcond( checkbyterange(FALSE, TRUE) == bool2int(uuidOption), "changed", 1 )
 		pop
+
+		push( "buckets" )
+		checkcond( bucketLen == buckets.length, "lengths don't match" )
+
+		for (i <- 0 until bucketLen)
+			checkcond( checkpointer == buckets(i), f"pointer mismatch - bucket array has ${buckets(i)}%x", pwidth )
+
+		pop
+
 		pop
 	}
 
 	def skip( len: Long ) = pos += len
-	
+
 	def skipByte = pos += 1
-	
+
 	def skipByte( addr: Long ) {
 		pos = addr
 		skipByte
 	}
-	
+
 	def skipType( addr: Long ) {
 		if (getUnsignedByte( addr ) == POINTER)
 			skipByte( getBig )
