@@ -6,7 +6,7 @@ import java.time.{Instant, OffsetDateTime, ZoneOffset}
 import java.util.UUID
 
 import collection.AbstractIterator
-import collection.mutable.{ArrayStack, ListBuffer}
+import collection.mutable.{ArrayBuffer, ArrayStack, ListBuffer}
 
 
 object IO {
@@ -732,10 +732,15 @@ abstract class IO extends IOConstants {
 
 	def check: Unit = {
 
-		val stack = new ArrayStack[String]
+		trait Cont
+		case class ObjectCont( p: Long ) extends Cont
+		case class ArrayCont( p: Long ) extends Cont
 
-		def problem( msg: String ) {
-			println( f"$pos%16x: $msg" )
+		val stack = new ArrayStack[(String, Cont)]
+		val reclaimed = new ArrayBuffer[(Long, Long)]
+
+		def problem( msg: String, adjust: Int = 0 ) {
+			println( f"${pos - adjust}%16x: $msg" )
 
 			for (item <- stack)
 				println( item )
@@ -743,22 +748,27 @@ abstract class IO extends IOConstants {
 			sys.exit( 1 )
 		}
 
-		def push( item: String) : Unit =
-			stack push f"$pos%16x: $item"
+		def push( item: String, cont: Cont = null ) : Unit =
+			stack push (f"$pos%16x: $item", cont)
 
-		def pop = stack.pop
+		def pop = stack.pop._2
+
+		def cont: Unit = {
+			if (stack nonEmpty) {
+				pop match {
+					case null =>
+					case ObjectCont( p ) =>
+
+					case ArrayCont( p ) =>
+				}
+			}
+		}
 
 		def checkcond( c: Boolean, msg: String, adjust: Int = 0 ) =
-			if (!c) {
-				if (adjust != 0)
-					skip( -adjust )
+			if (!c)
+				problem( msg, adjust )
 
-				problem( msg )
-			}
-
-		def checkbytes( n: Int ): Unit = {
-			checkcond( size >= pos + n, (pos + n - size) + " past end" )
-		}
+		def checkbytes( n: Int ) = checkcond( remaining >= n, (n - remaining) + " past end" )
 
 		def checkubyte = {
 			checkbytes( 1 )
@@ -770,12 +780,16 @@ abstract class IO extends IOConstants {
 			getBig
 		}
 
-		def checkbytestring: Unit = {
+		def checkbytestring( s: String ): Unit = {
 			val l = checkubyte
 
 			checkcond( l > 0, s"byte string size should be positive: $l" )
 			checkbytes( l )
-			skip( l )
+
+			if (s ne null)
+				checkcond( readByteChars(l) == s, "incorrect byte string" )
+			else
+				skip( l )
 		}
 
 		def checkbyterange( from: Int, to: Int ) = {
@@ -785,23 +799,40 @@ abstract class IO extends IOConstants {
 			b
 		}
 
+		def checkdata: Unit = {
+			checkbytes( vwidth )
+			// check if we've wondered into reclaimed space
+
+			checkubyte match {
+				case NULL|NSTRING|FALSE|TRUE|EMPTY|NIL|INTEGER =>
+				case BIGINT => sys.error( "BIGINT" )
+				case DOUBLE => sys.error( "DOUBLE" )
+				case b => problem( f"unknown type byte: $b%02x", 1 )
+			}
+		}
+
 		pos = 0
 		push( "file header" )
 		push( "file type" )
-		checkbytestring
+		checkbytestring( "BittyDB" )
 		pop
+
 		push( "format version" )
-		checkbytestring
+		checkbytestring( null )
 		pop
+
 		push( "charset" )
-		checkbytestring
+		checkbytestring( null )
 		pop
+
 		push( "pointer width" )
 		checkcond( checkbyterange(1, 8) == pwidth, "changed", 1 )
 		pop
+
 		push( "cell width" )
 		checkcond( checkbyterange(1, 16) == cwidth, "changed", 1 )
 		pop
+
 		push( "uuid" )
 		checkcond( checkbyterange(FALSE, TRUE) == bool2int(uuidOption), "changed", 1 )
 		pop
@@ -813,6 +844,7 @@ abstract class IO extends IOConstants {
 			checkcond( checkpointer == buckets(i), f"pointer mismatch - bucket array has ${buckets(i)}%x", pwidth )
 
 		pop
+
 
 		pop
 	}

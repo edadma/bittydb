@@ -11,7 +11,9 @@ import xyz.hyperreal.lia.Math
 
 
 object Connection {
-	private def invalid = throw new InvalidDatabaseException
+	private def invalid = {
+		throw new InvalidDatabaseException
+	}
 	
 	def disk( file: String, options: (Symbol, Any)* ): Connection = disk( new File(file), options: _* )
 	
@@ -79,7 +81,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 			case Some( s ) if s == "BittyDB" =>
 				io.getByteString match {
 					case Some( v ) => version = v
-					case _ => Connection.invalid
+					case _ => io.check
 				}
 				
 				if (version > FORMAT_VERSION)
@@ -87,17 +89,17 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 					
 				io.getByteString match {
 					case Some( cs ) => io.charset = Charset.forName( cs )
-					case _ => Connection.invalid
+					case _ => io.check
 				}
 				
 				io.getByte match {
 					case n if 1 <= n && n <= 8 => io.pwidth = n
-					case _ => Connection.invalid
+					case _ => io.check
 				}
 				
 				io.getUnsignedByte match {
 					case n if io.pwidth <= n && n <= 255 => io.cwidth = n
-					case _ => Connection.invalid
+					case _ => io.check
 				}
 				
 				io.uuidOption = io.getBoolean
@@ -105,7 +107,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 				io.bucketsPtr = io.pos
 				io.buckets = (for (_ <- 1 to io.bucketLen) yield io.getBig).toArray
 				rootPtr = io.pos
-			case _ => Connection.invalid
+			case _ => io.check
 		}
 	
 	val root = new DBFilePointer( rootPtr )

@@ -12,7 +12,8 @@ class AllocIO( io: IO ) extends MemIO {
 	charset = io.charset
 	pwidth = io.pwidth
 	cwidth = io.cwidth
-	
+	bucketsPtr = io.bucketsPtr
+
 	def backpatch( io: IO, src: Long ) =
 		backpatches += ((io, src, pos))
 	

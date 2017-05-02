@@ -6,9 +6,6 @@ import prop.PropertyChecks
 
 class MethodTests extends FreeSpec with PropertyChecks with Matchers
 {
-	IO.bwidth_default = 1
-	IO.cwidth_default = 1
-	
 	"set/remove" in
 	{
 	var db = Connection.mem()
