@@ -807,6 +807,8 @@ abstract class IO extends IOConstants {
 				case NULL|NSTRING|FALSE|TRUE|EMPTY|NIL|INTEGER =>
 				case BIGINT => sys.error( "BIGINT" )
 				case DOUBLE => sys.error( "DOUBLE" )
+				case Type1( SSTRING, l ) => checkcond( 0 <= l && l <= 0xF, s"small string length out of range: $l", 1 )
+				case Type2( STRING, encoding, width ) =>
 				case b => problem( f"unknown type byte: $b%02x", 1 )
 			}
 		}
