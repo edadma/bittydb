@@ -839,6 +839,20 @@ abstract class IO extends IOConstants {
 						checkcond( Charset.isSupported(cs), s"charset not supported: $cs", css )
 
 					checkbytes( len )
+				case MEMBERS =>
+					val cont = checkpointer
+					val len = checkpointer
+					val start = pos
+
+					while (pos - start < len) {
+						if (checkubyte == USED) {
+							checkvalue
+							checkvalue
+						} else {
+							skipValue
+							skipValue
+						}
+					}
 				case b => problem( f"unknown type byte: $b%02x", 1 )
 			}
 		}
