@@ -25,7 +25,7 @@ abstract class IO extends IOConstants {
 	private [bittydb] lazy val vwidth = 1 + cwidth						// value width
 	private [bittydb] lazy val twidth = 1 + 2*vwidth 					// pair width
 	private [bittydb] lazy val ewidth = 1 + vwidth						// element width
-	private [bittydb] lazy val lowestSize = bitCeiling( ewidth ).toInt		// smallest allocation block needed
+	private [bittydb] lazy val lowestSize = bitCeiling( ewidth + 1 ).toInt		// smallest allocation block needed
 	private [bittydb] lazy val sizeShift = Integer.numberOfTrailingZeros( lowestSize )
 	private [bittydb] lazy val bucketLen = pwidth*8 - sizeShift
 	
@@ -748,8 +748,8 @@ abstract class IO extends IOConstants {
 			sys.exit( 1 )
 		}
 
-		def push( item: String, cont: Cont = null ) : Unit =
-			stack push (f"$pos%16x: $item", cont)
+		def push( item: String, cont: Cont = null, adjust: Int = 0 ) : Unit =
+			stack push (f"${pos - adjust}%16x: $item", cont)
 
 		def pop = stack.pop._2
 
@@ -764,15 +764,25 @@ abstract class IO extends IOConstants {
 			}
 		}
 
-		def checkcond( c: Boolean, msg: String, adjust: Int = 0 ) =
+		def checkif( c: Boolean, msg: String, adjust: Int = 0 ) =
 			if (!c)
 				problem( msg, adjust )
 
-		def checkbytes( n: Int ) = checkcond( remaining >= n, f"${n - remaining}%x past end" )
+		def checkbytes( n: Int ) = checkif( remaining >= n, f"${n - remaining}%x past end" )
 
 		def checkubyte = {
 			checkbytes( 1 )
 			getUnsignedByte
+		}
+
+		def checkushort = {
+			checkbytes( 2 )
+			getUnsignedShort
+		}
+
+		def checkint = {
+			checkbytes( 4 )
+			getInt
 		}
 
 		def checkpointer = {
@@ -780,7 +790,7 @@ abstract class IO extends IOConstants {
 
 			val p = getBig
 
-			checkcond( 0 <= p && p < size - 1, "pointer out of range" )
+			checkif( 0 <= p && p < size - 1, f"pointer out of range: $p%x", pwidth )
 			// todo: check if pointer points to reclaimed space
 			p
 		}
@@ -788,13 +798,13 @@ abstract class IO extends IOConstants {
 		def checkbytestring( s: String ) = {
 			val l = checkubyte
 
-			checkcond( l > 0, s"byte string size should be positive: $l" )
+			checkif( l > 0, s"byte string size should be positive: $l" )
 			checkbytes( l )
 
 			val chars = readByteChars( l )
 
 			if (s ne null)
-				checkcond( chars == s, "incorrect byte string", l )
+				checkif( chars == s, "incorrect byte string", l )
 
 			(chars, l + 1)
 		}
@@ -802,20 +812,29 @@ abstract class IO extends IOConstants {
 		def checkbyterange( from: Int, to: Int ) = {
 			val b = checkubyte
 
-			checkcond( from <= b && b <= to, s"byte out of range: $from to $to" )
+			checkif( from <= b && b <= to, s"byte out of range: $from to $to" )
 			b
 		}
 
+		def checkpos( p: Long, adjust: Int = 0 ): Unit = {
+			checkif( 0 < p && p < size, f"invalid file position: $p%x", adjust )
+			pos = p
+		}
+
 		def checkvalue: Unit = {
+			val cur = pos
+
 			checkbytes( vwidth )
 			// todo: check if we've wondered into reclaimed space
 
 			checkubyte match {
 				case POINTER =>
-					pos = checkpointer
+					checkpos( checkpointer, pwidth )
 					checkdata( checkubyte )
 				case t => checkdata( t )
 			}
+
+			pos = cur + vwidth
 		}
 
 		def checkdata( t: Int ): Unit = {
@@ -824,35 +843,106 @@ abstract class IO extends IOConstants {
 				case NULL|NSTRING|FALSE|TRUE|EMPTY|NIL|INTEGER =>
 				case BIGINT => sys.error( "BIGINT" )
 				case DOUBLE => sys.error( "DOUBLE" )
-				case Type1( SSTRING, l ) => checkcond( 0 <= l && l <= 0xF, s"small string length out of range: $l", 1 )
+				case Type1( SSTRING, l ) =>
+					push( "small string", adjust = 1 )
+					checkif( 0 <= l && l <= 0xF, s"small string length out of range: $l", 1 )
+					skip( cwidth )
+					pop
 				case Type2( STRING, encoding, width ) =>
+					push( "string" )
 					val len =
 						width match {
-							case UBYTE_LENGTH => getUnsignedByte
-							case USHORT_LENGTH => getUnsignedShort
-							case INT_LENGTH => getInt
+							case UBYTE_LENGTH => checkubyte
+							case USHORT_LENGTH => checkushort
+							case INT_LENGTH => checkint
 						}
 
-					val (cs, css) = checkbytestring( null )
+					if (encoding == ENCODING_INCLUDED) {
+						val (cs, css) = checkbytestring( null )
 
-					if (encoding == ENCODING_INCLUDED)
-						checkcond( Charset.isSupported(cs), s"charset not supported: $cs", css )
+						checkif( Charset.isSupported( cs ), s"charset not supported: $cs", css )
+					}
 
 					checkbytes( len )
+					skip( len )
+					pop
 				case MEMBERS =>
-					val cont = checkpointer
-					val len = checkpointer
-					val start = pos
+					def chunk {
+						push( "object chunk" )
+						push( "next chunk pointer" )
+						val cont = checkpointer
+						pop
+						push( "chunk length" )
+						val len = checkpointer
+						pop
+						val start = pos
 
-					while (pos - start < len) {
-						if (checkubyte == USED) {
-							checkvalue
-							checkvalue
-						} else {
-							skipValue
-							skipValue
+						while (pos - start < len) {
+							push( "pair" )
+
+							if (checkubyte == USED) {
+								push( "key" )
+								checkvalue
+								pop
+								push( "value" )
+								checkvalue
+								pop
+							} else {
+								checkbytes( 2*vwidth )
+								skipValue
+								skipValue
+							}
+
+							pop
 						}
+
+						if (cont != NUL) {
+							checkpos( cont )
+							chunk
+						}
+
+						pop
 					}
+
+					push( "object", adjust = 1 )
+					checkpointer
+					chunk
+					pop
+				case ELEMENTS =>
+					def chunk {
+						push( "array chunk" )
+
+						val cont = getBig
+						val len = getBig
+						val start = pos
+
+						while (pos - start < len) {
+							if (getUnsignedByte == USED)
+								checkvalue
+							else {
+								checkbytes( vwidth )
+								skipValue
+							}
+						}
+
+						if (cont > 0) {
+							checkpos( cont )
+							chunk
+						}
+
+						pop
+					}
+
+					push( "array", adjust = 1 )
+					checkpointer						// skip count
+
+					checkpointer match {				// set pos to first chunk
+						case NUL => checkpointer
+						case f => checkpos( f, pwidth )
+					}
+
+					chunk
+					pop
 				case b => problem( f"unknown type byte: $b%02x", 1 )
 			}
 		}
@@ -872,22 +962,22 @@ abstract class IO extends IOConstants {
 		pop
 
 		push( "pointer width" )
-		checkcond( checkbyterange(1, 8) == pwidth, "changed", 1 )
+		checkif( checkbyterange(1, 8) == pwidth, "changed", 1 )
 		pop
 
 		push( "cell width" )
-		checkcond( checkbyterange(1, 16) == cwidth, "changed", 1 )
+		checkif( checkbyterange(1, 16) == cwidth, "changed", 1 )
 		pop
 
 		push( "uuid" )
-		checkcond( checkbyterange(FALSE, TRUE) == bool2int(uuidOption), "changed", 1 )
+		checkif( checkbyterange(FALSE, TRUE) == bool2int(uuidOption), "changed", 1 )
 		pop
 
 		push( "buckets" )
-		checkcond( bucketLen == buckets.length, "lengths don't match" )
+		checkif( bucketLen == buckets.length, "lengths don't match" )
 
 		for (i <- 0 until bucketLen)
-			checkcond( checkpointer == buckets(i), f"pointer mismatch - bucket array has ${buckets(i)}%x", pwidth )
+			checkif( checkpointer == buckets(i), f"pointer mismatch - bucket array has ${buckets(i)}%x", pwidth )
 
 		pop
 		pop

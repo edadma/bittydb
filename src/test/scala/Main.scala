@@ -17,10 +17,12 @@ object Main extends App {
 	coll insert m
 	db.io.dump
 	println( coll.list )
+	db.io.check
 
 	coll remove m
 	db.io.dump
 	println( coll.list )
+	db.io.check
 
 	coll insert n
 	db.io.dump
