@@ -43,7 +43,7 @@ class Collection( parent: Connection#Pointer, name: String ) extends IOConstants
 			c = parent( name )
 		}
 
-	def iterator = c.members
+	def iterator = c.elements
 
 	def list = iterator.toList
 

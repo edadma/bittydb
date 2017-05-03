@@ -25,7 +25,7 @@ abstract class IO extends IOConstants {
 	private [bittydb] lazy val vwidth = 1 + cwidth						// value width
 	private [bittydb] lazy val twidth = 1 + 2*vwidth 					// pair width
 	private [bittydb] lazy val ewidth = 1 + vwidth						// element width
-	private [bittydb] lazy val lowestSize = bitCeiling( ewidth + 1 ).toInt		// smallest allocation block needed
+	private [bittydb] lazy val lowestSize = bitCeiling( ewidth + 2 ).toInt		// smallest allocation block needed
 	private [bittydb] lazy val sizeShift = Integer.numberOfTrailingZeros( lowestSize )
 	private [bittydb] lazy val bucketLen = pwidth*8 - sizeShift
 	
@@ -176,8 +176,7 @@ abstract class IO extends IOConstants {
 				Some( readByteChars(len) )
 			else
 				None
-		}
-		else
+		} else
 			None
 	}
 
@@ -513,7 +512,7 @@ abstract class IO extends IOConstants {
 		skipBig						// skip count
 
 		getBig match {				// set pos to first chunk
-			case NUL => skipBig
+			case NUL => skipBig				// skip last chuck pointer
 			case f => pos = f
 		}
 
@@ -937,8 +936,11 @@ abstract class IO extends IOConstants {
 					checkpointer						// skip count
 
 					checkpointer match {				// set pos to first chunk
-						case NUL => checkpointer
-						case f => checkpos( f, pwidth )
+						case NUL =>
+							checkpointer				// skip last chuck pointer
+						case f =>
+							checkpointer				// skip last chuck pointer
+							checkpos( f, pwidth )
 					}
 
 					chunk
@@ -1072,7 +1074,7 @@ abstract class IO extends IOConstants {
 			}
 			
 			dealloc( p )
-			putByte( addr, NULL )
+//			putByte( addr, NULL )
 		}
 	}
 	

@@ -143,9 +143,17 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 	
 	override def toString = "connection to " + io
 	
-	class Cursor( val elem: Long ) extends DBFilePointer( elem + 1 ) {
+	class Cursor( val elem: Long, array: Long ) extends DBFilePointer( elem + 1 ) {
+		val arraylen = {
+			io.getType( array ) match {
+				case NIL => sys.error( "can't have a cursor in an empty array" )
+				case ELEMENTS => io.pos
+				case t => sys.error( f"can only get a cursor for an array: $t%x, ${io.pos}%x" )
+			}}
+
 		def remove = {
 			io.putByte( elem, UNUSED )
+			io.addBig( arraylen, -1 )
 			io.remove( elem + 1 )
 		}
 
@@ -452,13 +460,13 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 				case _ => sys.error( "can only use 'length' for an array" )
 			}
 		
-		def cursor = io arrayIterator addr map (new Cursor( _ ))
+		def cursor = io arrayIterator addr map (new Cursor( _, addr ))
 		
-		def membersAs[A] = members.asInstanceOf[Iterator[A]]
+		def elementsAs[A] = elements.asInstanceOf[Iterator[A]]
+
+		def elements = cursor map (_ get)
 		
-		def members = cursor map (_ get)
-		
-		def at( index: Int ) = new Cursor( io arrayIterator addr drop index next )
+		def at( index: Int ) = new Cursor( io arrayIterator addr drop index next, addr )
 		
 		def kind = io getType addr
 		
