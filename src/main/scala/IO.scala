@@ -22,6 +22,7 @@ abstract class IO extends IOConstants {
 	private [bittydb] var buckets: Array[Long] = _
 	private [bittydb] var uuidOption: Boolean = true
 
+	private [bittydb] lazy val maxsize = 1L << pwidth*8
 	private [bittydb] lazy val vwidth = 1 + cwidth						// value width
 	private [bittydb] lazy val twidth = 1 + 2*vwidth 					// pair width
 	private [bittydb] lazy val ewidth = 1 + vwidth						// element width
@@ -117,6 +118,9 @@ abstract class IO extends IOConstants {
 	}
 
 	def putBig( l: Long ) {
+		if (l > maxsize)
+			sys.error( "pointer value too large" )
+
 		for (shift <- (pwidth - 1)*8 to 0 by -8)
 			putByte( (l >> shift).asInstanceOf[Int] )
 	}

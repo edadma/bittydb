@@ -3,12 +3,12 @@ package xyz.hyperreal.bittydb
 import java.nio.ByteBuffer
 
 
-class ExpandableByteBuffer
+class ExpandableByteBuffer( maxsize: Int )
 {
 	private var array: Array[Byte] = null
 	private var _buffer: ByteBuffer = null
 	private var _size = 0
-	
+
 	array = allocate( 16 )
 	
 	def buffer = _buffer
@@ -40,8 +40,13 @@ class ExpandableByteBuffer
 	
 	def getting( bytes: Int ) = assert( _buffer.position + bytes <= _size, "attempting to read past end of buffer" )
 	
-	def putting( bytes: Int ) = sizeHint( _buffer.position + bytes )
-	
+	def putting( bytes: Int ) = {
+		if (_buffer.position + bytes.toLong > maxsize)
+			sys.error( "size overflow" )
+
+		sizeHint( _buffer.position + bytes )
+	}
+
 	def sizeHint( hint: Int ) {
 		if (hint > array.length && hint >= 1) {
 			val newarray = allocate( array.length*2 )

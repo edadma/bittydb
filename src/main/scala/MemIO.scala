@@ -7,7 +7,7 @@ import collection.concurrent.TrieMap
 
 class MemIO extends IO
 {
-	private [bittydb] lazy val buf = new ExpandableByteBuffer
+	private [bittydb] lazy val buf = new ExpandableByteBuffer( maxsize min Int.MaxValue toInt )
 	private [bittydb] val locks = new TrieMap[Long, ReentrantReadWriteLock]
 
 	def lock( addr: Long ) =
