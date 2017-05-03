@@ -730,38 +730,22 @@ abstract class IO extends IOConstants {
 	}
 
 	def check: Unit = {
-
-		trait Cont
-		case class ObjectCont( p: Long ) extends Cont
-		case class ArrayCont( p: Long ) extends Cont
-
-		val stack = new ArrayStack[(String, Cont)]
+		val stack = new ArrayStack[String]
 		val reclaimed = new ArrayBuffer[(Long, Long)]
 
 		def problem( msg: String, adjust: Int = 0 ) {
 			println( f"${pos - adjust}%16x: $msg" )
 
-			for ((item, _) <- stack)
+			for (item <- stack)
 				println( item )
 
-			sys.exit( 1 )
+			sys.error( "check failed" )
 		}
 
-		def push( item: String, cont: Cont = null, adjust: Int = 0 ) : Unit =
-			stack push (f"${pos - adjust}%16x: $item", cont)
+		def push( item: String, adjust: Int = 0 ) : Unit =
+			stack push f"${pos - adjust}%16x: $item"
 
-		def pop = stack.pop._2
-
-		def cont: Unit = {
-			if (stack nonEmpty) {
-				pop match {
-					case null =>
-					case ObjectCont( p ) =>
-
-					case ArrayCont( p ) =>
-				}
-			}
-		}
+		def pop = stack.pop
 
 		def checkif( c: Boolean, msg: String, adjust: Int = 0 ) =
 			if (!c)
@@ -903,7 +887,7 @@ abstract class IO extends IOConstants {
 						pop
 					}
 
-					push( "object", adjust = 1 )
+					push( "object", 1 )
 					checkpointer
 					chunk
 					pop
@@ -1102,13 +1086,13 @@ abstract class IO extends IOConstants {
 		padCell
 		res
 	}
-	
+
 	private [bittydb] def placeAllocs( io: IO ) {
 		for (a <- allocs) {
 			io.buckets( a.bucket ) match {
 				case NUL =>
 					a.base = io.appendbase + 1
-					io.appendbase += 1 + a.size
+					io.appendbase += a.allocSize
 				case p =>
 					val ptr = io.getBig( p )
 				
@@ -1132,7 +1116,8 @@ abstract class IO extends IOConstants {
 		for (a <- allocs) {
 			dest.pos = a.base - 1
 			dest.putByte( a.bucket )
-			dest.writeBuffer( a.asInstanceOf[MemIO] )
+			dest.writeBuffer( a )
+			dest.pad( a.allocSize - a.size )
 			a.writeAllocs( dest )
 		}
 	}

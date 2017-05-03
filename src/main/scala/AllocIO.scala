@@ -7,7 +7,7 @@ class AllocIO( io: IO ) extends MemIO {
 	private [bittydb] val backpatches = new ListBuffer[(IO, Long, Long)]
 	private [bittydb] var base: Long = _
 	
-	private [bittydb] lazy val bucket = java.lang.Long.numberOfTrailingZeros(bitCeiling(size) max lowestSize) - sizeShift
+	private [bittydb] lazy val bucket = java.lang.Long.numberOfTrailingZeros( allocSize ) - sizeShift
 	
 	charset = io.charset
 	pwidth = io.pwidth
@@ -21,4 +21,8 @@ class AllocIO( io: IO ) extends MemIO {
 		for ((io, src, target) <- backpatches)
 			io.putBig( src, base + target )
 	}
+
+	private [bittydb] def allocSize = bitCeiling( size + 1 ) max lowestSize
+
+	override def toString = f"[alloc: base = $base%x, size = $size%x]"
 }
