@@ -63,14 +63,14 @@ Use the following elements to use BittyDB in your Maven project:
 	<dependency>
 		<groupId>xyz.hyperreal</groupId>
 		<artifactId>bittydb</artifactId>
-		<version>0.3</version>
+		<version>0.5</version>
 	</dependency>
 
 Add the following to your `build.sbt` file to use BittyDB in your SBT project:
 
 	resolvers += "Hyperreal Repository" at "https://dl.bintray.com/edadma/maven"
 
-	libraryDependencies += "xyz.hyperreal" %% "bittydb" % "0.3"
+	libraryDependencies += "xyz.hyperreal" %% "bittydb" % "0.5"
 
 	
 ## Building
