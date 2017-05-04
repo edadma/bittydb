@@ -547,7 +547,6 @@ abstract class IO extends IOConstants {
 			count += 1
 		}
 
-//		println( pos - start - pwidth, start )	//todo: remove
 		putBig( start, pos - start - pwidth )
 		lengthio.addBig( lengthptr, count )
 	}

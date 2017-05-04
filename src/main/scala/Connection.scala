@@ -413,7 +413,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 								io.putBig( header + io.pwidth, header + 3*io.pwidth )
 						}
 						
-						val cont = io.alloc//allocPad //todo: this could be wrong
+						val cont = io.alloc
 						
 						cont.backpatch( io, header + 2*io.pwidth )
 						cont.putArrayChunk( s, io, header )
