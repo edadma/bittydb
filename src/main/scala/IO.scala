@@ -539,7 +539,7 @@ abstract class IO extends IOConstants {
 		val start = pos
 		var count = 0L
 
-		padBig	// size of object in bytes
+		padBig	// length of chunk in bytes
 
 		for (e <- s) {
 			putByte( USED )
@@ -547,6 +547,7 @@ abstract class IO extends IOConstants {
 			count += 1
 		}
 
+//		println( pos - start - pwidth, start )	//todo: remove
 		putBig( start, pos - start - pwidth )
 		lengthio.addBig( lengthptr, count )
 	}
@@ -827,7 +828,7 @@ abstract class IO extends IOConstants {
 		def checkdata( t: Int ): Unit = {
 			// todo: check if allocation block is the correct size
 			t match {
-				case NULL|NSTRING|FALSE|TRUE|EMPTY|NIL|INTEGER =>
+				case NULL|NSTRING|FALSE|TRUE|EMPTY|NIL|BYTE|SHORT|INT|LONG =>
 				case BIGINT => sys.error( "BIGINT" )
 				case DOUBLE => sys.error( "DOUBLE" )
 				case Type1( SSTRING, l ) =>
@@ -899,8 +900,15 @@ abstract class IO extends IOConstants {
 					def chunk {
 						push( "array chunk" )
 
-						val cont = getBig
-						val len = getBig
+						push( "next chunk pointer" )
+						val cont = checkpointer
+						pop
+
+						push( "chunk length")
+						val len = checkpointer
+						checkif( 0 < len && len%(cwidth + 2) == 0, "must be positive and a multiple of (cwidth + 2)", pwidth )
+						pop
+
 						val start = pos
 
 						while (pos - start < len) {
@@ -1075,7 +1083,7 @@ abstract class IO extends IOConstants {
 		buckets(ind) = p
 		putBig( bucketPtr(ind), p )
 	}
-	
+
 	def alloc = {
 		val res = new AllocIO( this )
 		
