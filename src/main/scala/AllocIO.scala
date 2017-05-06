@@ -22,7 +22,7 @@ class AllocIO( io: IO ) extends MemIO {
 			io.putBig( src, base + target )
 	}
 
-	private [bittydb] def allocSize = bitCeiling( size + 1 ) max lowestSize
+	private [bittydb] def allocSize = bitCeiling( size + 1 ) max minblocksize
 
 	override def toString = f"[alloc: base = $base%x, size = $size%x]"
 }

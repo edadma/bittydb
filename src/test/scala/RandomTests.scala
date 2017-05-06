@@ -33,9 +33,9 @@ class RandomTests extends FreeSpec with PropertyChecks with Matchers with TableD
 	val widths =
 		Table(
 			("pwidth", "cwidth", "insertions"),
-//			(1, 1, 3),	// these tests fail intermittently: wrong bucket index byte in reclaimed block
-//			(1, 2, 3),
-//			(1, 3, 3),
+			(1, 1, 3),
+			(1, 2, 3),
+			(1, 3, 3),
 			(2, 2, 500),
 			(2, 3, 500),
 			(2, 4, 500),

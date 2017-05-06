@@ -26,8 +26,8 @@ abstract class IO extends IOConstants {
 	private [bittydb] lazy val vwidth = 1 + cwidth						// value width
 	private [bittydb] lazy val twidth = 1 + 2*vwidth 					// pair width
 	private [bittydb] lazy val ewidth = 1 + vwidth						// element width
-	private [bittydb] lazy val lowestSize = bitCeiling( ewidth + 2 ).toInt		// smallest allocation block needed
-	private [bittydb] lazy val sizeShift = Integer.numberOfTrailingZeros( lowestSize )
+	private [bittydb] lazy val minblocksize = bitCeiling( vwidth + 1 ).toInt		// smallest allocation block needed
+	private [bittydb] lazy val sizeShift = Integer.numberOfTrailingZeros( minblocksize )
 	private [bittydb] lazy val bucketLen = pwidth*8 - sizeShift
 	
 //	println( pwidth, lowestSize, sizeShift, bucketLen )
@@ -947,9 +947,9 @@ abstract class IO extends IOConstants {
 
 		def checkbucket( block: Long, bucket: Int ) {
 			if (block != NUL) {
-				push( s"bucket $bucket" )
+				push( s"bucket $bucket", pwidth )
 				checkpos( block - 1 )
-				checkif( checkubyte == bucket, "bucket index byte not correct", 1 )
+				checkif( checkubyte == bucket, "incorrect bucket index byte", 1 )
 				checkbucket( checkpointer, bucket )
 				pop
 			}
@@ -1145,7 +1145,7 @@ abstract class IO extends IOConstants {
 			dest.pos = a.base - 1
 			dest.putByte( a.bucket )
 			dest.writeBuffer( a )
-			dest.pad( a.allocSize - a.size )
+			dest.pad( a.allocSize - a.size - 1 )
 			a.writeAllocs( dest )
 		}
 	}
