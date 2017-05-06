@@ -743,6 +743,7 @@ abstract class IO extends IOConstants {
 			for (item <- stack)
 				println( item )
 
+			dump
 			sys.error( "check failed" )
 		}
 
@@ -944,6 +945,16 @@ abstract class IO extends IOConstants {
 			}
 		}
 
+		def checkbucket( block: Long, bucket: Int ) {
+			if (block != NUL) {
+				push( s"bucket $bucket" )
+				checkpos( block - 1 )
+				checkif( checkubyte == bucket, "bucket index byte not correct", 1 )
+				checkbucket( checkpointer, bucket )
+				pop
+			}
+		}
+
 		pos = 0
 		push( "file header" )
 		push( "file type" )
@@ -973,8 +984,14 @@ abstract class IO extends IOConstants {
 		push( "buckets" )
 		checkif( bucketLen == buckets.length, "lengths don't match" )
 
-		for (i <- 0 until bucketLen)
+		for (i <- 0 until bucketLen) {
 			checkif( checkpointer == buckets(i), f"pointer mismatch - bucket array has ${buckets(i)}%x", pwidth )
+
+			val bucket = pos
+
+			checkbucket( buckets(i), i )
+			pos = bucket
+		}
 
 		pop
 		pop

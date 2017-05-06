@@ -84,4 +84,4 @@ Add the following to your `build.sbt` file to use BittyDB in your SBT project:
 
 	git clone git://github.com/edadma/bittydb.git
 	cd bittydb
-	sbt test
+	sbt "test-only * -- -l \"org.scalatest.tags.Disk org.scalatest.tags.CPU\""
