@@ -1,6 +1,6 @@
 name := "bittydb"
 
-version := "0.5"
+version := "0.6"
 
 scalaVersion := "2.12.2"
 
