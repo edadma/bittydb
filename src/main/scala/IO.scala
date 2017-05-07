@@ -1059,16 +1059,7 @@ abstract class IO extends IOConstants {
 	
 	private [bittydb] val allocs = new ListBuffer[AllocIO]
 	private [bittydb] var appendbase: Long = _
-	
-	private [bittydb] def bitCeiling( n: Long ) = {
-		val highest = java.lang.Long.highestOneBit( n )
-		
-		if ((highest^n) == 0)
-			highest
-		else
-			highest << 1
-	}
-	
+
 	def remove( addr: Long ) {
 		if (getUnsignedByte( addr ) == POINTER) {
 			val p = getBig( addr + 1 )

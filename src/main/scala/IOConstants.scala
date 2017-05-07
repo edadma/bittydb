@@ -28,7 +28,7 @@ trait IOConstants {
 	val POINTER =		0xC0
 	val TIMESTAMP =		0xD0
 	val DATETIME =		0xE0
-	val TYPE =			0xF0
+	val DELETED =			0xF0
 	
 	val UBYTE_LENGTH = 0
 	val USHORT_LENGTH = 1

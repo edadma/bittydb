@@ -5,11 +5,11 @@ import java.nio.ByteBuffer
 
 class ExpandableByteBuffer( maxsize: Int )
 {
-	private var array: Array[Byte] = null
-	private var _buffer: ByteBuffer = null
+	private var array: Array[Byte] = _
+	private var _buffer: ByteBuffer = _
 	private var _size = 0
 
-	array = allocate( 16 )
+	array = allocate( 1024 )
 	
 	def buffer = _buffer
 	
@@ -49,7 +49,7 @@ class ExpandableByteBuffer( maxsize: Int )
 
 	def sizeHint( hint: Int ) {
 		if (hint > array.length && hint >= 1) {
-			val newarray = allocate( array.length*2 )
+			val newarray = allocate( bitCeiling(hint).toInt )
 
 			compat.Platform.arraycopy( array, 0, newarray, 0, _size )
 			array = newarray

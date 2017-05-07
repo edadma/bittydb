@@ -9,13 +9,13 @@ import prop.{PropertyChecks, TableDrivenPropertyChecks}
 
 class RandomTests extends FreeSpec with PropertyChecks with Matchers with TableDrivenPropertyChecks {
 
-	def rndAlpha = new String( Array.fill( nextInt(10) )((nextInt('z' - 'a') + 'a').toChar) )
+	def rndAlpha( max: Int ) = new String( Array.fill( nextInt(max) )((nextInt('z' - 'a') + 'a').toChar) )
 
-	def rnd( s: collection.Set[Map[String, Any]] ): Map[String, Any] = {
-		val a = Map( rndAlpha -> nextLong )
+	def rnd( s: collection.Set[Map[String, Any]], max: Int ): Map[String, Any] = {
+		val a = Map( rndAlpha(max) -> nextLong )
 
 		if (s(a))
-			rnd( s )
+			rnd( s, max )
 		else
 			a
 	}
@@ -32,26 +32,26 @@ class RandomTests extends FreeSpec with PropertyChecks with Matchers with TableD
 		)
 	val widths =
 		Table(
-			("pwidth", "cwidth", "insertions"),
-			(1, 1, 3),
-			(1, 2, 3),
-			(1, 3, 3),
-			(2, 2, 500),
-			(2, 3, 500),
-			(2, 4, 500),
-			(3, 3, 1000),
-			(3, 4, 1000),
-			(3, 5, 1000),
-			(4, 4, 1000),
-			(4, 5, 1000),
-			(4, 6, 1000),
-			(5, 5, 2000),
-			(5, 6, 2000),
-			(5, 7, 2000),
-			(5, 8, 2000)
+			("pwidth", "cwidth", "insertions", "max length"),
+			(1, 1, 3, 10),
+			(1, 2, 3, 10),
+			(1, 3, 3, 10),
+			(2, 2, 200, 64),
+			(2, 3, 200, 128),
+			(2, 4, 200, 128),
+			(3, 3, 500, 128),
+			(3, 4, 500, 128),
+			(3, 5, 500, 256),
+			(4, 4, 1000, 128),
+			(4, 5, 1000, 256),
+			(4, 6, 1000, 256),
+			(5, 5, 1000, 256),
+			(5, 6, 1000, 256),
+			(5, 7, 1000, 512),
+			(5, 8, 1000, 512)
 		)
 
-	forAll (widths) { (pwidth, cwidth, insertions) =>
+	forAll (widths) { (pwidth, cwidth, insertions, max) =>
 		forAll (trials) { ( trial, tag ) =>
 			s"stress test trial $trial using pwidth of $pwidth and cwidth of $cwidth" taggedAs tag in {
 				val db =
@@ -66,7 +66,7 @@ class RandomTests extends FreeSpec with PropertyChecks with Matchers with TableD
 				db.io.check
 
 				for (_ <- 1 to insertions) {
-					val m = rnd( set )
+					val m = rnd( set, max )
 
 					coll.insert( m )
 					set += m
@@ -86,7 +86,7 @@ class RandomTests extends FreeSpec with PropertyChecks with Matchers with TableD
 				coll.set shouldEqual set
 
 				for (_ <- 1 to insertions / 2) {
-					val m = rnd( set )
+					val m = rnd( set, max )
 
 					coll.insert( m )
 					set += m

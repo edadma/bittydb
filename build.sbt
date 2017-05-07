@@ -1,6 +1,6 @@
 name := "bittydb"
 
-version := "0.6"
+version := "0.7"
 
 scalaVersion := "2.12.2"
 
@@ -63,7 +63,7 @@ licenses := Seq("MIT" -> url("http://opensource.org/licenses/MIT"))
 
 homepage := Some(url("https://github.com/edadma/" + name.value))
 
-pomExtra := (
+pomExtra :=
   <scm>
     <url>git@github.com:edadma/{name.value}.git</url>
     <connection>scm:git:git@github.com:edadma/{name.value}.git</connection>
@@ -74,4 +74,4 @@ pomExtra := (
       <name>Edward A. Maxedon, Sr.</name>
       <url>https://github.com/edadma</url>
     </developer>
-  </developers>)
+  </developers>

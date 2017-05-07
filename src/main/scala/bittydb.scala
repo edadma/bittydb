@@ -19,4 +19,13 @@ package object bittydb {
 	def timestamp = Instant.now
 	
 	def datetime = OffsetDateTime.now
+
+	def bitCeiling( n: Long ) = {
+		val highest = java.lang.Long.highestOneBit( n )
+
+		if ((highest^n) == 0)
+			highest
+		else
+			highest << 1
+	}
 }
