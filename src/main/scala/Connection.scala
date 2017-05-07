@@ -143,7 +143,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 	
 	override def toString = "connection to " + io
 	
-	class Cursor( val elem: Long, array: Long ) extends DBFilePointer( elem + 1 ) {
+	class Cursor( val elem: Long, array: Long ) extends DBFilePointer( elem ) {
 		val arraylen =
 			io.getType( array ) match {
 				case NIL => sys.error( "can't have a cursor in an empty array" )
@@ -152,13 +152,13 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 			}
 
 		def remove = {
-			io.putByte( elem, UNUSED )
+			io.remove( elem )
+			io.putByte( elem, DELETED )
 			io.addBig( arraylen, -1 )
-			io.remove( elem + 1 )
 		}
 
 		override def get =
-			if (io.getUnsignedByte( elem ) == UNUSED)
+			if (io.peekUnsignedByte( elem ) == DELETED)
 				sys.error( "element has been removed" )
 			else
 				super.get

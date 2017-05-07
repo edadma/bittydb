@@ -6,12 +6,12 @@ import util.Random._
 
 object Main extends App {
 
-	val db = Connection.mem( 'uuid -> false, 'pwidth -> 2, 'cwidth -> 2 )
-	val coll = db( "DB" )
+	val db = Connection.mem( 'uuid -> false, 'pwidth -> 1, 'cwidth -> 1 )
+	val coll = db( "D" )
 
 	db.io.check
 
-	def rndAlpha = new String( Array.fill( nextInt(64) )((nextInt('z' - 'a') + 'a').toChar) )
+	def rndAlpha = new String( Array.fill( nextInt(10) )((nextInt('z' - 'a') + 'a').toChar) )
 
 	def rnd( s: collection.Set[Map[String, Any]] ): Map[String, Any] = {
 		val a = Map( rndAlpha -> nextLong )
@@ -27,7 +27,7 @@ object Main extends App {
 	}
 
 	val set = new HashSet[Map[String, Any]]
-	val insertions = 100
+	val insertions = 3
 
 	println( "insert" )
 
@@ -39,10 +39,11 @@ object Main extends App {
 		set += m
 	}
 
-	println( coll.set == set, db.io.size )
-	db.io.check
+//	db.io.dump
 
 	try {db.io.check} catch {case e: Exception => println( e ); sys.exit(1)}
+
+	println( coll.set == set, db.io.size )
 
 	println( "\nremove" )
 

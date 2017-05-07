@@ -25,11 +25,11 @@ abstract class IO extends IOConstants {
 	private [bittydb] lazy val maxsize = 1L << pwidth*8
 	private [bittydb] lazy val vwidth = 1 + cwidth						// value width
 	private [bittydb] lazy val twidth = 1 + 2*vwidth 					// pair width
-	private [bittydb] lazy val ewidth = 1 + vwidth						// element width
+//	private [bittydb] lazy val ewidth = 1 + vwidth						// element width
 	private [bittydb] lazy val minblocksize = bitCeiling( vwidth + 1 ).toInt		// smallest allocation block needed
 	private [bittydb] lazy val sizeShift = Integer.numberOfTrailingZeros( minblocksize )
 	private [bittydb] lazy val bucketLen = pwidth*8 - sizeShift
-	
+
 //	println( pwidth, lowestSize, sizeShift, bucketLen )
 
 	//
@@ -67,7 +67,7 @@ abstract class IO extends IOConstants {
 	def putBytes( a: Array[Byte] )
 	
 	def getUnsignedByte: Int
-	
+
 	def getChar: Char
 	
 	def putChar( c: Char )
@@ -77,7 +77,7 @@ abstract class IO extends IOConstants {
 	def putShort( s: Int )
 	
 	def getUnsignedShort: Int
-	
+
 	def getInt: Int
 	
 	def putInt( i: Int )
@@ -97,6 +97,18 @@ abstract class IO extends IOConstants {
 	//
 	// i/o methods based on abstract methods
 	//
+
+	def peekUnsignedByte: Int = {
+		val b = getUnsignedByte
+
+		pos -= 1
+		b
+	}
+
+	def peekUnsignedByte( addr: Long ): Int = {
+		pos = addr
+		peekUnsignedByte
+	}
 
 	def getSmall: Int = (getByte << 16) | (getUnsignedByte << 8) | getUnsignedByte
 
@@ -488,7 +500,6 @@ abstract class IO extends IOConstants {
 	}
 
 	def putElement( v: Any ) {
-		putByte( USED )
 		putValue( v )
 	}
 
@@ -500,12 +511,11 @@ abstract class IO extends IOConstants {
 			val len = getBig
 			val start = pos
 
-			while (pos - start < len) {
-				if (getUnsignedByte == USED)
-					buf += getValue
-				else
+			while (pos - start < len)
+				if (peekUnsignedByte == DELETED)
 					skipValue
-			}
+				else
+					buf += getValue
 
 			if (cont > 0) {
 				pos = cont
@@ -542,7 +552,6 @@ abstract class IO extends IOConstants {
 		padBig	// length of chunk in bytes
 
 		for (e <- s) {
-			putByte( USED )
 			putValue( e )
 			count += 1
 		}
@@ -662,10 +671,10 @@ abstract class IO extends IOConstants {
 								nextused
 							}
 						else {
-							chunksize -= ewidth
+							chunksize -= vwidth
 
-							if (getUnsignedByte( cur ) == UNUSED) {
-								cur += ewidth
+							if (peekUnsignedByte( cur ) == DELETED) {
+								cur += vwidth
 								nextused
 							}
 						}
@@ -679,7 +688,7 @@ abstract class IO extends IOConstants {
 						else {
 							val res = cur
 
-							cur += ewidth
+							cur += vwidth
 							nextused
 							res
 						}
@@ -743,7 +752,7 @@ abstract class IO extends IOConstants {
 			for (item <- stack)
 				println( item )
 
-			dump
+//			dump
 			sys.error( "check failed" )
 		}
 
@@ -906,19 +915,17 @@ abstract class IO extends IOConstants {
 
 						push( "chunk length")
 						val len = checkpointer
-						checkif( 0 < len && len%(cwidth + 2) == 0, "must be positive and a multiple of (cwidth + 2)", pwidth )
+						checkif( 0 < len && len%vwidth == 0, "must be positive and a multiple of vwidth", pwidth )
 						pop
 
 						val start = pos
 
-						while (pos - start < len) {
-							if (getUnsignedByte == USED)
-								checkvalue
-							else {
+						while (pos - start < len)
+							if (peekUnsignedByte == DELETED) {
 								checkbytes( vwidth )
 								skipValue
-							}
-						}
+							} else
+								checkvalue
 
 						if (cont > 0) {
 							checkpos( cont )
@@ -1024,7 +1031,9 @@ abstract class IO extends IOConstants {
 	def skipDouble = skip( 8 )
 	
 	def skipValue = skip( vwidth )
-	
+
+	def skipCell = skip( cwidth )
+
 	def pad( n: Long ) =
 		for (_ <- 1L to n)
 			putByte( 0 )
