@@ -523,23 +523,24 @@ abstract class IO extends IOConstants {
 			}
 		}
 
-		skipBig						// skip count
+		val header = pos
 
-		getBig match {				// set pos to first chunk
-			case NUL => skipBig				// skip last chuck pointer
-			case f => pos = f
-		}
-
+		pos =
+			getBig match {				// set pos to first chunk
+				case NUL => header + 3*pwidth
+				case f => f
+			}
 		chunk
 		buf.toList
 	}
 
 	def putArray( s: collection.TraversableOnce[Any] ) {
+		padBig	// first chunk pointer
+		padBig	// last chunk pointer
+
 		val cur = pos
 
 		padBig	// length
-		padBig	// first chunk pointer
-		padBig	// last chunk pointer
 		putArrayChunk( s, this, cur )
 	}
 
@@ -639,13 +640,11 @@ abstract class IO extends IOConstants {
 			case NIL => Iterator.empty
 			case ELEMENTS =>
 				val header = pos
-
-				skipBig
-
-				val first = getBig match {
-					case NUL => header + 3*pwidth
-					case p => p
-				}
+				val first =
+					getBig match {
+						case NUL => header + 3*pwidth
+						case p => p
+					}
 
 				new AbstractIterator[Long] {
 					var cont: Long = _
@@ -908,11 +907,17 @@ abstract class IO extends IOConstants {
 				case ELEMENTS =>
 					push( "array", adjust = 1 )
 
-					val header = pos
-					val count = checkbig
-					var elemcount = 0
 					val first = checkbig
-					val last = checkbig
+					val lastptr = pos
+					val last =
+						checkbig match {
+							case NUL => pos + pwidth
+							case l => l
+						}
+					val countptr = pos
+					val count = checkbig
+
+					var elemcount = 0
 
 					def chunk {
 						push( "array chunk" )
@@ -941,8 +946,10 @@ abstract class IO extends IOConstants {
 						if (cont > 0) {
 							checkpos( cont )
 							chunk
-						} else
-							checkif( chunkheader == last, "last chunk pointer should point to adjacent chunk" )
+						} else {
+							pos = lastptr
+							checkif( chunkheader == last, "incorrect last chunk pointer" )
+						}
 
 						pop
 					}
@@ -951,7 +958,7 @@ abstract class IO extends IOConstants {
 						checkpos( first, pwidth )
 
 					chunk
-					pos = header
+					pos = countptr
 					checkif( elemcount == count, s"count is incorrect: count is $count but read $elemcount elements" )
 					pop
 				case b => problem( f"unknown type byte: $b%02x", 1 )
@@ -1087,12 +1094,11 @@ abstract class IO extends IOConstants {
 					}
 				case ELEMENTS =>
 					for (e <- arrayIterator( p ))
-						remove( e + 1 )
+						remove( e )
 				case _ =>
 			}
 			
 			dealloc( p )
-//			putByte( addr, NULL )
 		}
 	}
 	
