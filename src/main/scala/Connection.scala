@@ -391,11 +391,6 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 						case last => io.pos = last
 					}
 
-//						io.inert {
-//							if (io.getBig( header + io.pwidth ) == NUL)
-//								io.putBig( header + io.pwidth, header + 3*io.pwidth )
-//						}
-						
 					val cont = io.alloc
 
 					cont.backpatch( io, header + 2*io.pwidth )

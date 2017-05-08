@@ -22,7 +22,7 @@ object Main extends App {
 			a
 	}
 
-	def prt( m: Map[String, Any] ): Unit ={
+	def prt( m: Map[String, Any] ): Unit = {
 		println( m map {case (k, v) => (k, v match {case i: Int => i.toHexString; case l: Long => l.toHexString; case _ => v})} mkString " -> " )
 	}
 
