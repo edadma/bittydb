@@ -385,39 +385,21 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 					val header = io.pos
 
 					io.skipBig
-					
-// 					if (ending) {
-// 						io.skipBig
-// 						
-// 						val sizeptr = io.pos
-// 						
-// 						io.append
-// 						
-// 						var count = 0L
-// 						
-// 						for (e <- s) {
-// 							io.putElement( e )
-// 							count += 1
-// 						}
-// 						
-// 						io.addBig( sizeptr, count*io.ewidth )
-// 						io.addBig( header, count )
-// 					} else {
-						io.getBig( header + 2*io.pwidth ) match {
-							case NUL =>
-							case last => io.pos = last
-						}
+
+					io.getBig( header + 2*io.pwidth ) match {
+						case NUL =>
+						case last => io.pos = last
+					}
+
+//						io.inert {
+//							if (io.getBig( header + io.pwidth ) == NUL)
+//								io.putBig( header + io.pwidth, header + 3*io.pwidth )
+//						}
 						
-						io.inert {
-							if (io.getBig( header + io.pwidth ) == NUL)
-								io.putBig( header + io.pwidth, header + 3*io.pwidth )
-						}
-						
-						val cont = io.alloc
-						
-						cont.backpatch( io, header + 2*io.pwidth )
-						cont.putArrayChunk( s, io, header )
-// 					}
+					val cont = io.alloc
+
+					cont.backpatch( io, header + 2*io.pwidth )
+					cont.putArrayChunk( s, io, header )
 				case _ => sys.error( "can only use 'append' for an array" )
 			}
 			

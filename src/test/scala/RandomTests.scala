@@ -52,7 +52,7 @@ class RandomTests extends FreeSpec with PropertyChecks with Matchers with TableD
 		)
 
 	forAll (widths) { (pwidth, cwidth, insertions, max) =>
-		forAll (trials) { ( trial, tag ) =>
+		forAll (trials) { (trial, tag) =>
 			s"stress test trial $trial using pwidth of $pwidth and cwidth of $cwidth" taggedAs tag in {
 				val db =
 					if (trial == 0) {
@@ -75,7 +75,7 @@ class RandomTests extends FreeSpec with PropertyChecks with Matchers with TableD
 				db.io.check
 				coll.set shouldEqual set
 
-				for (_ <- 1 to insertions / 2) {
+				for (_ <- 1 to insertions/2) {
 					val doc = set.head
 
 					coll remove doc
@@ -85,7 +85,27 @@ class RandomTests extends FreeSpec with PropertyChecks with Matchers with TableD
 				db.io.check
 				coll.set shouldEqual set
 
-				for (_ <- 1 to insertions / 2) {
+				for (_ <- 1 to insertions/2) {
+					val m = rnd( set, max )
+
+					coll.insert( m )
+					set += m
+				}
+
+				db.io.check
+				coll.set shouldEqual set
+
+				for (_ <- 1 to insertions/2) {
+					val doc = set.head
+
+					coll remove doc
+					set -= doc
+				}
+
+				db.io.check
+				coll.set shouldEqual set
+
+				for (_ <- 1 to insertions/2) {
 					val m = rnd( set, max )
 
 					coll.insert( m )

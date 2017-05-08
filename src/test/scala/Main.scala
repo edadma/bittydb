@@ -27,49 +27,49 @@ object Main extends App {
 	}
 
 	val set = new HashSet[Map[String, Any]]
-	val insertions = 3
+	val insertions = 2
 
 	println( "insert" )
 
 	for (_ <- 1 to insertions) {
 		val m = rnd( set )
 
-//		prt( m )
+		prt( m )
 		coll.insert( m )
 		set += m
 	}
 
-//	db.io.dump
+	db.io.dump
 
 	try {db.io.check} catch {case e: Exception => println( e ); sys.exit(1)}
 
 	println( coll.set == set, db.io.size )
 
-	println( "\nremove" )
-
-	for (_ <- 1 to insertions/2) {
-		val doc = set.head
-
-//		prt( doc )
-		coll remove doc
-		set -= doc
-	}
-
-	println( coll.set == set, db.io.size )
-	db.io.check
-
-	println( "\ninsert" )
-
-	for (_ <- 1 to insertions/2) {
-		val m = rnd( set )
-
-//		prt( m )
-		coll.insert( m )
-		set += m
-	}
-
-	println( coll.set == set, db.io.size )
-	db.io.check
+//	println( "\nremove" )
+//
+//	for (_ <- 1 to insertions/2) {
+//		val doc = set.head
+//
+////		prt( doc )
+//		coll remove doc
+//		set -= doc
+//	}
+//
+//	println( coll.set == set, db.io.size )
+//	db.io.check
+//
+//	println( "\ninsert" )
+//
+//	for (_ <- 1 to insertions/2) {
+//		val m = rnd( set )
+//
+////		prt( m )
+//		coll.insert( m )
+//		set += m
+//	}
+//
+//	println( coll.set == set, db.io.size )
+//	db.io.check
 	db.close
 
 }
