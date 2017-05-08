@@ -11,10 +11,10 @@ object Main extends App {
 
 	db.io.check
 
-	def rndAlpha = new String( Array.fill( nextInt(10) )((nextInt('z' - 'a') + 'a').toChar) )
+	def rndAlpha = new String( Array.fill( 1 )((nextInt('z' - 'a') + 'a').toChar) )
 
 	def rnd( s: collection.Set[Map[String, Any]] ): Map[String, Any] = {
-		val a = Map( rndAlpha -> nextLong )
+		val a = Map( rndAlpha -> 0x55 )
 
 		if (s(a))
 			rnd( s )

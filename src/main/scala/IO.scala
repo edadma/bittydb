@@ -782,7 +782,7 @@ abstract class IO extends IOConstants {
 			getInt
 		}
 
-		def checkpointer = {
+		def checkbig = {
 			checkbytes( pwidth )
 
 			val p = getBig
@@ -826,7 +826,7 @@ abstract class IO extends IOConstants {
 
 			checkubyte match {
 				case POINTER =>
-					checkpos( checkpointer, pwidth )
+					checkpos( checkbig, pwidth )
 					checkdata( checkubyte )
 				case t => checkdata( t )
 			}
@@ -867,10 +867,10 @@ abstract class IO extends IOConstants {
 					def chunk {
 						push( "object chunk" )
 						push( "next chunk pointer" )
-						val cont = checkpointer
+						val cont = checkbig
 						pop
 						push( "chunk length" )
-						val len = checkpointer
+						val len = checkbig
 						pop
 						val start = pos
 
@@ -902,19 +902,28 @@ abstract class IO extends IOConstants {
 					}
 
 					push( "object", 1 )
-					checkpointer
+					checkbig
 					chunk
 					pop
 				case ELEMENTS =>
+					push( "array", adjust = 1 )
+
+					val header = pos
+					val count = checkbig
+					var elemcount = 0
+					val first = checkbig
+					val last = checkbig
+
 					def chunk {
 						push( "array chunk" )
 
 						push( "next chunk pointer" )
-						val cont = checkpointer
+						val chunkheader = pos
+						val cont = checkbig
 						pop
 
 						push( "chunk length")
-						val len = checkpointer
+						val len = checkbig
 						checkif( 0 < len && len%vwidth == 0, "must be positive and a multiple of vwidth", pwidth )
 						pop
 
@@ -924,29 +933,26 @@ abstract class IO extends IOConstants {
 							if (peekUnsignedByte == DELETED) {
 								checkbytes( vwidth )
 								skipValue
-							} else
+							} else {
 								checkvalue
+								elemcount += 1
+							}
 
 						if (cont > 0) {
 							checkpos( cont )
 							chunk
-						}
+						} else
+							checkif( chunkheader == last, "last chunk pointer should point to adjacent chunk" )
 
 						pop
 					}
 
-					push( "array", adjust = 1 )
-					checkpointer						// skip count
-
-					checkpointer match {				// set pos to first chunk
-						case NUL =>
-							checkpointer				// skip last chuck pointer
-						case f =>
-							checkpointer				// skip last chuck pointer
-							checkpos( f, pwidth )
-					}
+					if (first != NUL)
+						checkpos( first, pwidth )
 
 					chunk
+					pos = header
+					checkif( elemcount == count, s"count is incorrect: count is $count but read $elemcount elements" )
 					pop
 				case b => problem( f"unknown type byte: $b%02x", 1 )
 			}
@@ -957,7 +963,7 @@ abstract class IO extends IOConstants {
 				push( s"bucket $bucket", pwidth )
 				checkpos( block - 1 )
 				checkif( checkubyte == bucket, "incorrect bucket index byte", 1 )
-				checkbucket( checkpointer, bucket )
+				checkbucket( checkbig, bucket )
 				pop
 			}
 		}
@@ -992,7 +998,7 @@ abstract class IO extends IOConstants {
 		checkif( bucketLen == buckets.length, "lengths don't match" )
 
 		for (i <- 0 until bucketLen) {
-			checkif( checkpointer == buckets(i), f"pointer mismatch - bucket array has ${buckets(i)}%x", pwidth )
+			checkif( checkbig == buckets(i), f"pointer mismatch - bucket array has ${buckets(i)}%x", pwidth )
 
 			val bucket = pos
 
