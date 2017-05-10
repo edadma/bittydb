@@ -527,7 +527,7 @@ abstract class IO extends IOConstants {
 
 		pos =
 			getBig match {				// set pos to first chunk
-				case NUL => header + 3*pwidth
+				case NUL => header + 4*pwidth
 				case f => f
 			}
 		chunk
@@ -537,6 +537,7 @@ abstract class IO extends IOConstants {
 	def putList( s: collection.TraversableOnce[Any] ) {
 		padBig	// first chunk pointer
 		padBig	// last chunk pointer
+		padBig	// free pointer
 
 		val cur = pos
 
@@ -642,7 +643,7 @@ abstract class IO extends IOConstants {
 				val header = pos
 				val first =
 					getBig match {
-						case NUL => header + 3*pwidth
+						case NUL => header + 4*pwidth
 						case p => p
 					}
 
@@ -914,6 +915,7 @@ abstract class IO extends IOConstants {
 							case NUL => pos + pwidth
 							case l => l
 						}
+					val free = checkbig
 					val countptr = pos
 					val count = checkbig
 

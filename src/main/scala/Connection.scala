@@ -147,7 +147,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 		val arraylen =
 			io.getType( array ) match {
 				case NIL => sys.error( "can't have a cursor in an empty array" )
-				case ELEMENTS => io.pos + 2*io.pwidth
+				case ELEMENTS => io.pos + 3*io.pwidth
 				case t => sys.error( f"can only get a cursor for an array: $t%x, ${io.pos}%x" )
 			}
 
@@ -386,14 +386,16 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 
 					io.skipBig	// skip first chunk pointer
 					io.getBig match {
-						case NUL => io.skipBig		// skip count
+						case NUL =>
+							io.skipBig		// skip free pointer
+							io.skipBig		// skip count
 						case last => io.pos = last
 					}
 
 					val cont = io.alloc
 
 					cont.backpatch( io, header + io.pwidth )
-					cont.putListChunk( s, io, header + 2*io.pwidth )
+					cont.putListChunk( s, io, header + 3*io.pwidth )
 				case _ => sys.error( "can only use 'append' for an array" )
 			}
 			
@@ -408,7 +410,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 				case ELEMENTS =>
 					val header = io.pos
 					val first = io.getBig match {
-						case NUL => header + 3*io.pwidth
+						case NUL => header + 4*io.pwidth
 						case p => p
 					}
 
@@ -416,7 +418,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 					
 					val cont = io.alloc
 					
-					cont.putListChunk( s, io, header + 2*io.pwidth, first )
+					cont.putListChunk( s, io, header + 3*io.pwidth, first )
 				case _ => sys.error( "can only use 'prepend' for an array" )
 			}
 			
@@ -426,7 +428,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 		def length =
 			io.getType( addr ) match {
 				case NIL => 0L
-				case ELEMENTS => io.getBig( io.pos + 2*io.pwidth )
+				case ELEMENTS => io.getBig( io.pos + 3*io.pwidth )
 				case _ => sys.error( "can only use 'length' for an array" )
 			}
 		
