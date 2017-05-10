@@ -499,40 +499,7 @@ abstract class IO extends IOConstants {
 		putPair( kv )
 	}
 
-	def putElement( v: Any ) {
-		putValue( v )
-	}
-
-	def getList = {
-		val buf = new ListBuffer[Any]
-
-		def chunk {
-			val cont = getBig
-			val len = getBig
-			val start = pos
-
-			while (pos - start < len)
-				if (peekUnsignedByte == DELETED)
-					skipValue
-				else
-					buf += getValue
-
-			if (cont > 0) {
-				pos = cont
-				chunk
-			}
-		}
-
-		val header = pos
-
-		pos =
-			getBig match {				// set pos to first chunk
-				case NUL => header + 4*pwidth
-				case f => f
-			}
-		chunk
-		buf.toList
-	}
+	def getList = elementsIterator map getValue toList
 
 	def putList( s: collection.TraversableOnce[Any] ) {
 		padBig	// first chunk pointer
@@ -548,17 +515,24 @@ abstract class IO extends IOConstants {
 	def putListChunk( s: collection.TraversableOnce[Any], lengthio: IO, lengthptr: Long, contptr: Long = NUL ) {
 		putBig( contptr )	// continuation pointer
 
-		val start = pos
-		var count = 0L
+		val lenptr = pos
 
 		padBig	// length of chunk in bytes
+
+		val countptr = pos
+
+		padBig	// count of elements
+
+		val elemsptr = pos
+		var count = 0L
 
 		for (e <- s) {
 			putValue( e )
 			count += 1
 		}
 
-		putBig( start, pos - start - pwidth )
+		putBig( lenptr, pos - elemsptr )
+		putBig( countptr, count )
 		lengthio.addBig( lengthptr, count )
 	}
 
@@ -636,63 +610,67 @@ abstract class IO extends IOConstants {
 			case _ => sys.error( "can only use 'objectIterator' for an object" )
 		}
 
+	private def elementsIterator = {
+		val header = pos
+		val first =
+			getBig match {
+				case NUL => header + 4*pwidth
+				case p => p
+			}
+
+		new AbstractIterator[Long] {
+			var cont: Long = _
+			var chunksize: Long = _
+			var cur: Long = _
+			var done = false
+
+			chunk( first )
+			nextused
+
+			private def chunk( p: Long ) {
+				cont = getBig( p )
+				chunksize = getBig
+				skipBig		// skip count
+				cur = pos
+			}
+
+			private def nextused {
+				if (chunksize == 0)
+					if (cont == NUL)
+						done = true
+					else {
+						chunk( cont )
+						nextused
+					}
+				else {
+					chunksize -= vwidth
+
+					if (peekUnsignedByte( cur ) == DELETED) {
+						cur += vwidth
+						nextused
+					}
+				}
+			}
+
+			def hasNext = !done
+
+			def next =
+				if (done)
+					throw new NoSuchElementException( "next on empty arrayIterator" )
+				else {
+					val res = cur
+
+					cur += vwidth
+					nextused
+					res
+				}
+		}
+	}
+
 	def listIterator( addr: Long ) =
 		getType( addr ) match {
 			case NIL => Iterator.empty
-			case ELEMENTS =>
-				val header = pos
-				val first =
-					getBig match {
-						case NUL => header + 4*pwidth
-						case p => p
-					}
-
-				new AbstractIterator[Long] {
-					var cont: Long = _
-					var chunksize: Long = _
-					var cur: Long = _
-					var done = false
-
-					chunk( first )
-					nextused
-
-					private def chunk( p: Long ) {
-						cont = getBig( p )
-						chunksize = getBig
-						cur = pos
-					}
-
-					private def nextused {
-						if (chunksize == 0)
-							if (cont == NUL)
-								done = true
-							else {
-								chunk( cont )
-								nextused
-							}
-						else {
-							chunksize -= vwidth
-
-							if (peekUnsignedByte( cur ) == DELETED) {
-								cur += vwidth
-								nextused
-							}
-						}
-					}
-
-					def hasNext = !done
-
-					def next =
-						if (done)
-							throw new NoSuchElementException( "next on empty arrayIterator" )
-						else {
-							val res = cur
-
-							cur += vwidth
-							nextused
-							res
-						}
-				}
+			case ELEMENTS => elementsIterator
 			case _ => sys.error( "can only use 'arrayIterator' for an array" )
 		}
 
@@ -922,16 +900,21 @@ abstract class IO extends IOConstants {
 					var elemcount = 0
 
 					def chunk {
-						push( "array chunk" )
-
-						push( "next chunk pointer" )
 						val chunkheader = pos
+
+						push( "array chunk" )
+						push( "next chunk pointer" )
 						val cont = checkbig
 						pop
 
-						push( "chunk length")
+						push( "chunk length" )
 						val len = checkbig
 						checkif( 0 < len && len%vwidth == 0, "must be positive and a multiple of vwidth", pwidth )
+						pop
+
+						push( "chunk count" )
+						val count = checkbig
+						checkif( 0 < count && count <= len/vwidth, "must be positive and less than length/vwidth", pwidth )
 						pop
 
 						val start = pos
