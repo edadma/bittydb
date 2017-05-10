@@ -143,8 +143,8 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 	
 	override def toString = "connection to " + io
 	
-	class Cursor( val elem: Long, array: Long ) extends DBFilePointer( elem ) {
-		val arraylen =
+	class Cursor( val chunk: Long, val elem: Long, array: Long ) extends DBFilePointer( elem ) {
+		lazy val arraylenptr =
 			io.getType( array ) match {
 				case NIL => sys.error( "can't have a cursor in an empty array" )
 				case ELEMENTS => io.pos + 3*io.pwidth
@@ -154,7 +154,8 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 		def remove = {
 			io.remove( elem )
 			io.putByte( elem, DELETED )
-			io.addBig( arraylen, -1 )
+			io.addBig( arraylenptr, -1 )
+			io.addBig( chunk + 2*io.pwidth, -1 )
 		}
 
 		override def get =
@@ -432,13 +433,17 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 				case _ => sys.error( "can only use 'length' for an array" )
 			}
 		
-		def cursor = io listIterator addr map (new Cursor( _, addr ))
+		def cursor = io listIterator addr map {case (chunk, elem) => new Cursor( chunk, elem, addr )}
 		
 		def elementsAs[A] = elements.asInstanceOf[Iterator[A]]
 
 		def elements = cursor map (_ get)
 		
-		def at( index: Int ) = new Cursor( io listIterator addr drop index next, addr )
+		def at( index: Int ) = {
+			val (chunk, elem) = io listIterator addr drop index next
+
+			new Cursor( chunk, elem, addr )
+		}
 		
 		def kind = io getType addr
 		

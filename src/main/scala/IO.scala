@@ -460,13 +460,13 @@ abstract class IO extends IOConstants {
 			}
 		}
 
-		skipBig	// skip last chunk pointer
+		skipBig		// skip last chunk pointer
 		chunk
 		map
 	}
 
 	def putObject( m: collection.Map[_, _] ) {
-		padBig//putBig( pos + pwidth )	// last chunk pointer
+		padBig		//putBig( pos + pwidth )	// last chunk pointer
 		putObjectChunk( m )
 	}
 
@@ -499,7 +499,7 @@ abstract class IO extends IOConstants {
 		putPair( kv )
 	}
 
-	def getList = elementsIterator map getValue toList
+	def getList = elementsIterator map {case (_, e) => getValue( e )} toList
 
 	def putList( s: collection.TraversableOnce[Any] ) {
 		padBig	// first chunk pointer
@@ -618,9 +618,10 @@ abstract class IO extends IOConstants {
 				case p => p
 			}
 
-		new AbstractIterator[Long] {
+		new AbstractIterator[(Long, Long)] {
 			var cont: Long = _
 			var chunksize: Long = _
+			var chunkptr: Long = _
 			var cur: Long = _
 			var done = false
 
@@ -628,6 +629,7 @@ abstract class IO extends IOConstants {
 			nextused
 
 			private def chunk( p: Long ) {
+				chunkptr = p
 				cont = getBig( p )
 				chunksize = getBig
 				skipBig		// skip count
@@ -658,7 +660,7 @@ abstract class IO extends IOConstants {
 				if (done)
 					throw new NoSuchElementException( "next on empty arrayIterator" )
 				else {
-					val res = cur
+					val res = (chunkptr, cur)
 
 					cur += vwidth
 					nextused
@@ -902,6 +904,8 @@ abstract class IO extends IOConstants {
 					def chunk {
 						val chunkheader = pos
 
+						var chunkelemcount = 0
+
 						push( "array chunk" )
 						push( "next chunk pointer" )
 						val cont = checkbig
@@ -913,8 +917,9 @@ abstract class IO extends IOConstants {
 						pop
 
 						push( "chunk count" )
+						val countptr = pos
 						val count = checkbig
-						checkif( 0 < count && count <= len/vwidth, "must be positive and less than length/vwidth", pwidth )
+						checkif( 0 <= count && count <= len/vwidth, "must be positive and less than length/vwidth", pwidth ) // todo: count should never be 0 if empty chunks are removed immediately
 						pop
 
 						val start = pos
@@ -926,7 +931,11 @@ abstract class IO extends IOConstants {
 							} else {
 								checkvalue
 								elemcount += 1
+								chunkelemcount += 1
 							}
+
+						pos = countptr
+						checkif( chunkelemcount == count, "incorrect chunk count" )
 
 						if (cont > 0) {
 							checkpos( cont )
@@ -1069,7 +1078,7 @@ abstract class IO extends IOConstants {
 
 	def remove( addr: Long ) {
 		if (getUnsignedByte( addr ) == POINTER) {
-			val p = getBig( addr + 1 )
+			val p = getBig
 
 			getUnsignedByte( p ) match {
 				case MEMBERS =>
@@ -1078,7 +1087,7 @@ abstract class IO extends IOConstants {
 						remove( m + 1 + vwidth )
 					}
 				case ELEMENTS =>
-					for (e <- listIterator( p ))
+					for ((_, e) <- listIterator( p ))
 						remove( e )
 				case _ =>
 			}
