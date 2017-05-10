@@ -10,7 +10,7 @@ trait IOConstants {
 	val INTEGER =		0x20
 	val BYTE =			INTEGER|0
 	val SHORT =			INTEGER|1
-	val INT =			INTEGER|2
+	val INT =				INTEGER|2
 	val LONG =			INTEGER|3
 	val BIGINT =		0x30
 	//					0x40	maybe SINGLE (Float)
@@ -23,13 +23,13 @@ trait IOConstants {
 	val EMPTY =			OBJECT|0
 	val MEMBERS =		OBJECT|1
 	val LIST =			0xB0
-	val NIL =			LIST|0
-	val ELEMENTS =		LIST|1
+	val NIL =				LIST|0
+	val ELEMENTS =	LIST|1
 	val POINTER =		0xC0
-	val TIMESTAMP =		0xD0
-	val DATETIME =		0xE0
-	val TYPE =				0xF0
-	val DELETED =			0xFF
+	val TIMESTAMP =	0xD0
+	val DATETIME =	0xE0
+	val TYPE =			0xF0
+	val DELETED =		0xFF
 	
 	val UBYTE_LENGTH = 0
 	val USHORT_LENGTH = 1
