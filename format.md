@@ -28,22 +28,24 @@ Internal Types
 - OBJECT = 0xA0
 	- EMPTY = OBJECT|0
 	- MEMBERS = OBJECT|1
-- ARRAY = 0xB0
-	- NIL = ARRAY|0
-	- ELEMENTS = ARRAY|1
+- LIST = 0xB0
+	- NIL = LIST|0
+	- ELEMENTS = LIST|1
 - POINTER = 0xC0
 - TIMESTAMP = 0xD0
 - DATETIME = 0xE0
+- TYPE =	0xF0
+- DELETED =	0xFF
 
-Internal types can be divided into *composite* or *basic* depending on whether they are built out of other types or not.  The composite types are OBJECT and ARRAY.  All other types are basic, except for POINTER which is in a class by itself.  Some basic types are *simple* in the sense that they only require their type and no other value data to be stored.  The simple types are NULL, BOOLEAN (TRUE/FALSE), single character strings (SSTRING of one character), EMPTY, and NIL.
+Internal types can be divided into *composite* or *basic* depending on whether they are built out of other types or not.  The composite types are OBJECT and list.  All other types are basic, except for POINTER which is in a class by itself.  Some basic types are *simple* in the sense that they only require their type and no other value data to be stored.  The simple types are NULL, BOOLEAN (TRUE/FALSE), single character strings (SSTRING of one character), EMPTY, and NIL.
 
 
 Special Values
 --------------
 
 - NUL = 0x00 (null pointer usually signifying end of a chain)
-- USED = 0x00 (signifying that a pair or array element is in use, meaning not deleted)
-- UNUSED = 0x01 (signifying that a pair or array element is unused, meaning deleted)
+- USED = 0x00 (signifying that a pair is in use, meaning not deleted)
+- UNUSED = 0x01 (signifying that a pair is unused, meaning deleted)
 
 
 Header
@@ -70,10 +72,10 @@ Generally, all values of any (non-simple) type that can be put into the database
 
 Field        | Contents         | Default | Description
 -----        | --------         | ------- | -----------
-type         | *t*              |         | *t* is the one byte type identifier
+type         | *t*              |         | *t* is the one byte type identifier, which can also contain the value `DELETED`
 data         | *v*              |         | *v* is the value's data
 
-Values of one of the simple types only have the 'type' field.
+Values of one of the simple types only have the 'type' field and don't have any associated data. In that case, the contents of the data field is undefined.
 
 The header is followed immediately by the *root* object.  All other values in the database can have any type, but the root must be an object.
 

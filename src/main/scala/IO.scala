@@ -293,7 +293,7 @@ abstract class IO extends IOConstants {
 				case EMPTY => Map.empty
 				case MEMBERS => getObject
 				case NIL => Nil
-				case ELEMENTS => getArray
+				case ELEMENTS => getList
 			}
 
 		pos = cur + vwidth
@@ -422,7 +422,7 @@ abstract class IO extends IOConstants {
 				val io = allocPad
 
 				io.putByte( ELEMENTS )
-				io.putArray( a )
+				io.putList( a )
 			case a => sys.error( "unknown type: " + a )
 		}
 	}
@@ -503,7 +503,7 @@ abstract class IO extends IOConstants {
 		putValue( v )
 	}
 
-	def getArray = {
+	def getList = {
 		val buf = new ListBuffer[Any]
 
 		def chunk {
@@ -534,17 +534,17 @@ abstract class IO extends IOConstants {
 		buf.toList
 	}
 
-	def putArray( s: collection.TraversableOnce[Any] ) {
+	def putList( s: collection.TraversableOnce[Any] ) {
 		padBig	// first chunk pointer
 		padBig	// last chunk pointer
 
 		val cur = pos
 
 		padBig	// length
-		putArrayChunk( s, this, cur )
+		putListChunk( s, this, cur )
 	}
 
-	def putArrayChunk( s: collection.TraversableOnce[Any], lengthio: IO, lengthptr: Long, contptr: Long = NUL ) {
+	def putListChunk( s: collection.TraversableOnce[Any], lengthio: IO, lengthptr: Long, contptr: Long = NUL ) {
 		putBig( contptr )	// continuation pointer
 
 		val start = pos
@@ -635,7 +635,7 @@ abstract class IO extends IOConstants {
 			case _ => sys.error( "can only use 'objectIterator' for an object" )
 		}
 
-	def arrayIterator( addr: Long ) =
+	def listIterator( addr: Long ) =
 		getType( addr ) match {
 			case NIL => Iterator.empty
 			case ELEMENTS =>
@@ -1034,15 +1034,15 @@ abstract class IO extends IOConstants {
 		if (getUnsignedByte( addr ) == POINTER)
 			skipByte( getBig )
 	}
-	
+
 	def skipBig = skip( pwidth )
-	
+
 	def skipInt = skip( 4 )
-	
+
 	def skipLong = skip( 8 )
-	
+
 	def skipDouble = skip( 8 )
-	
+
 	def skipValue = skip( vwidth )
 
 	def skipCell = skip( cwidth )
@@ -1050,21 +1050,21 @@ abstract class IO extends IOConstants {
 	def pad( n: Long ) =
 		for (_ <- 1L to n)
 			putByte( 0 )
-			
+
 	def padBig = pad( pwidth )
-	
+
 	def padCell = pad( cwidth )
-	
+
 	def encode( s: String ) = s.getBytes( charset )
-	
+
 	def inert( action: => Unit ) {
 		val cur = pos
-		
+
 		action
-		
+
 		pos = cur
 	}
-	
+
 	def need( width: Int ) = {
 		if (width > cwidth) {
 			putByte( POINTER )
@@ -1072,20 +1072,20 @@ abstract class IO extends IOConstants {
 		} else
 			(this, cwidth - width)
 	}
-	
+
 	def todo = sys.error( "not implemented" )
-	
+
 	//
 	// allocation
 	//
-	
+
 	private [bittydb] val allocs = new ListBuffer[AllocIO]
 	private [bittydb] var appendbase: Long = _
 
 	def remove( addr: Long ) {
 		if (getUnsignedByte( addr ) == POINTER) {
 			val p = getBig( addr + 1 )
-			
+
 			getUnsignedByte( p ) match {
 				case MEMBERS =>
 					for (m <- objectIterator( p )) {
@@ -1093,7 +1093,7 @@ abstract class IO extends IOConstants {
 						remove( m + 1 + vwidth )
 					}
 				case ELEMENTS =>
-					for (e <- arrayIterator( p ))
+					for (e <- listIterator( p ))
 						remove( e )
 				case _ =>
 			}

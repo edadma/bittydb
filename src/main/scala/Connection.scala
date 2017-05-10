@@ -393,7 +393,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 					val cont = io.alloc
 
 					cont.backpatch( io, header + io.pwidth )
-					cont.putArrayChunk( s, io, header + 2*io.pwidth )
+					cont.putListChunk( s, io, header + 2*io.pwidth )
 				case _ => sys.error( "can only use 'append' for an array" )
 			}
 			
@@ -416,7 +416,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 					
 					val cont = io.alloc
 					
-					cont.putArrayChunk( s, io, header + 2*io.pwidth, first )
+					cont.putListChunk( s, io, header + 2*io.pwidth, first )
 				case _ => sys.error( "can only use 'prepend' for an array" )
 			}
 			
@@ -430,13 +430,13 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 				case _ => sys.error( "can only use 'length' for an array" )
 			}
 		
-		def cursor = io arrayIterator addr map (new Cursor( _, addr ))
+		def cursor = io listIterator addr map (new Cursor( _, addr ))
 		
 		def elementsAs[A] = elements.asInstanceOf[Iterator[A]]
 
 		def elements = cursor map (_ get)
 		
-		def at( index: Int ) = new Cursor( io arrayIterator addr drop index next, addr )
+		def at( index: Int ) = new Cursor( io listIterator addr drop index next, addr )
 		
 		def kind = io getType addr
 		

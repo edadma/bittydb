@@ -22,9 +22,9 @@ trait IOConstants {
 	val OBJECT =		0xA0
 	val EMPTY =			OBJECT|0
 	val MEMBERS =		OBJECT|1
-	val ARRAY =			0xB0
-	val NIL =			ARRAY|0
-	val ELEMENTS =		ARRAY|1
+	val LIST =			0xB0
+	val NIL =			LIST|0
+	val ELEMENTS =		LIST|1
 	val POINTER =		0xC0
 	val TIMESTAMP =		0xD0
 	val DATETIME =		0xE0
