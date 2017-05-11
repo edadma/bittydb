@@ -155,7 +155,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 //			val nextptr = io.getBig( freeptr )
 
 			io.addBig( lenptr, -1 )
-			io.addBig( chunk + 2*io.pwidth, -1 )
+			io.addBig( chunk + 4*io.pwidth, -1 )
 			io.remove( elem )
 //			io.putBig( freeptr, elem )
 			io.putByte( elem, DELETED )

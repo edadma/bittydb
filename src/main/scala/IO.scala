@@ -504,7 +504,7 @@ abstract class IO extends IOConstants {
 	def putList( s: collection.TraversableOnce[Any] ) {
 		padBig	// first chunk pointer
 		padBig	// last chunk pointer
-		padBig	// free pointer
+		padBig	// chunks with freed elements list pointer
 
 		val cur = pos
 
@@ -514,6 +514,8 @@ abstract class IO extends IOConstants {
 
 	def putListChunk( s: collection.TraversableOnce[Any], lengthio: IO, lengthptr: Long, contptr: Long = NUL ) {
 		putBig( contptr )	// continuation pointer
+		padBig	// next chunks with freed elements pointer
+		padBig	// free pointer
 
 		val lenptr = pos
 
@@ -631,6 +633,8 @@ abstract class IO extends IOConstants {
 			private def chunk( p: Long ) {
 				chunkptr = p
 				cont = getBig( p )
+				skipBig		// next freed pointer
+				skipBig		// free pointer
 				chunksize = getBig
 				skipBig		// skip count
 				cur = pos
@@ -895,7 +899,7 @@ abstract class IO extends IOConstants {
 							case NUL => pos + pwidth
 							case l => l
 						}
-					val free = checkbig
+					val freed = checkbig
 					val countptr = pos
 					val count = checkbig
 
@@ -909,6 +913,14 @@ abstract class IO extends IOConstants {
 						push( "array chunk" )
 						push( "next chunk pointer" )
 						val cont = checkbig
+						pop
+
+						push( "next freed pointer" )
+						val nfree = checkbig
+						pop
+
+						push( "free pointer" )
+						val free = checkbig
 						pop
 
 						push( "chunk length" )
