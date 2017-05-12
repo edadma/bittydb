@@ -35,7 +35,7 @@ object Main extends App {
 	for (_ <- 1 to insertions) {
 		val m = rnd( set )
 
-		prt( m )
+//		prt( m )
 		coll.insert( m )
 		set += m
 	}

@@ -152,14 +152,21 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 			}
 
 		def remove = {
-//			val nextptr = io.getBig( freeptr )
+			val nextptr =
+				io.getBig( chunk + 2*io.pwidth ) match {
+					case NUL =>
+						io.putBig( chunk + io.pwidth, io.getBig(freeptr) )
+						io.putBig( freeptr, chunk )
+						NUL
+					case p => p
+				}
 
+			io.putBig( chunk + 2*io.pwidth, elem )
 			io.addBig( lenptr, -1 )
 			io.addBig( chunk + 4*io.pwidth, -1 )
 			io.remove( elem )
-//			io.putBig( freeptr, elem )
 			io.putByte( elem, DELETED )
-//			io.putBig( nextptr )
+			io.putBig( nextptr )
 		}
 
 		override def get =

@@ -147,12 +147,13 @@ abstract class IO extends IOConstants {
 		putBig( l )
 	}
 
-	def addBig( a: Long ) {
+	def addBig( a: Long ) = {
 		val cur = pos
-		val v = getBig
+		val sum = getBig + a
 
 		pos = cur
-		putBig( v + a )
+		putBig( sum )
+		sum
 	}
 
 	def addBig( addr: Long, a: Long ) {
@@ -931,7 +932,7 @@ abstract class IO extends IOConstants {
 						push( "chunk count" )
 						val countptr = pos
 						val count = checkbig
-						checkif( 0 <= count && count <= len/vwidth, "must be positive and less than length/vwidth", pwidth ) // todo: count should never be 0 if empty chunks are removed immediately
+						checkif( 0 <= count && count <= len/vwidth, "must be non-negative and less than or equal to length/vwidth", pwidth ) // todo: count should never be 0 if empty chunks are removed immediately
 						pop
 
 						val start = pos
