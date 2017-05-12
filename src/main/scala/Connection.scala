@@ -387,7 +387,25 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 					}
 				case _ => sys.error( "can only use 'set' for an object" )
 			}
-		
+
+		def insert( elem: Any ): Unit = {
+			io.getType( addr ) match {
+				case NIL => append( elem )
+				case ELEMENTS =>
+					io.skipBig	// skip first chunk pointer
+					io.skipBig	// skip last chunk pointer
+
+					val freeptr = io.pos
+
+					io.getBig( freeptr ) match {
+						case NUL => append( elem )
+						case chunk =>
+							
+					}
+				case _ => sys.error( "can only use 'insert' for an array" )
+			}
+		}
+
 		def append( elems: Any* ) = appendSeq( elems )
 		
 		def appendSeq( s: TraversableOnce[Any] ) {
