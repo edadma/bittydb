@@ -15,7 +15,7 @@ object Main extends App {
 	def rndAlpha = new String( Array.fill( 1 )((nextInt('z' - 'a') + 'a').toChar) )
 
 	def rnd( s: collection.Set[Map[String, Any]] ): Map[String, Any] = {
-		val a = Map( rndAlpha -> 0x55 )
+		val a = Map( rndAlpha -> Vector(0x55) )
 
 		if (s(a))
 			rnd( s )

@@ -4,9 +4,8 @@ import java.io.File
 import java.nio.charset.Charset
 
 import util.Either
-import collection.{TraversableOnce, Map => CMap}
+import collection.{LinearSeq, TraversableOnce, Map => CMap}
 import collection.mutable.AbstractMap
-
 import xyz.hyperreal.lia.Math
 
 
@@ -414,13 +413,13 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 							io.addBig( chunk + 4*io.pwidth, 1 )
 							io.addBig( countptr, 1 )
 					}
-				case _ => sys.error( "can only use 'insert' for an array" )
+				case _ => sys.error( "can only use 'insert' for a list" )
 			}
 		}
 
-		def append( elems: Any* ) = appendSeq( elems )
+		def append( elems: Any* ) = appendSeq( elems.toList )
 		
-		def appendSeq( s: TraversableOnce[Any] ) {
+		def appendSeq( s: LinearSeq[Any] ) {
 			io.getType( addr ) match {
 				case NIL => io.putValue( addr, s )
 				case LIST_ELEMS =>
@@ -444,9 +443,9 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 			io.finish
 		}
 		
-		def prepend( elems: Any* ) = prependSeq( elems )
+		def prepend( elems: Any* ) = prependSeq( elems.toList )
 		
-		def prependSeq( s: TraversableOnce[Any] ) {
+		def prependSeq( s: LinearSeq[Any] ) {
 			io.getType( addr ) match {
 				case NIL => io.putValue( addr, s )
 				case LIST_ELEMS =>

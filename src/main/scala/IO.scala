@@ -293,6 +293,8 @@ abstract class IO extends IOConstants {
 						getString( len )
 				case EMPTY => Map.empty
 				case MEMBERS => getObject
+				case EMPTY_ARRAY => Array()
+				case ARRAY_ELEMS => getArray
 				case NIL => Nil
 				case LIST_ELEMS => getList
 			}
@@ -414,6 +416,16 @@ abstract class IO extends IOConstants {
 
 				io.putByte( MEMBERS )
 				io.putObject( a )
+			case a: collection.IndexedSeq[_] if a isEmpty =>
+				putByte( EMPTY_ARRAY )
+				pad( cwidth )
+			case a: collection.IndexedSeq[_] =>
+				putByte( POINTER )
+
+				val io = allocPad
+
+				io.putByte( ARRAY_ELEMS )
+				io.putArray( a )
 			case a: collection.TraversableOnce[_] if a isEmpty =>
 				putByte( NIL )
 				pad( cwidth )
@@ -500,7 +512,30 @@ abstract class IO extends IOConstants {
 		putPair( kv )
 	}
 
-	def getList = elementsIterator map {case (_, e) => getValue( e )} toList
+	def arrayElemsIterator =
+		new AbstractIterator[Long] {
+			var count = getBig
+			var cur = pos
+
+			def hasNext = count > 0
+
+			def next = {
+				val res = cur
+
+				cur += cwidth
+				count -= 1
+				res
+			}
+		}
+
+	def getArray = arrayElemsIterator map getValue toList
+
+	def putArray( a: collection.IndexedSeq[Any] ): Unit = {
+		putBig( a.length )
+		a foreach putValue
+	}
+
+	def getList = listElemsIterator map {case (_, e) => getValue( e )} toList
 
 	def putList( s: collection.TraversableOnce[Any] ) {
 		padBig	// first chunk pointer
@@ -613,7 +648,7 @@ abstract class IO extends IOConstants {
 			case _ => sys.error( "can only use 'objectIterator' for an object" )
 		}
 
-	private def elementsIterator = {
+	private def listElemsIterator = {
 		val header = pos
 		val first =
 			getBig match {
@@ -663,7 +698,7 @@ abstract class IO extends IOConstants {
 
 			def next =
 				if (done)
-					throw new NoSuchElementException( "next on empty arrayIterator" )
+					throw new NoSuchElementException( "next on empty listElemsIterator" )
 				else {
 					val res = (chunkptr, cur)
 
@@ -677,8 +712,8 @@ abstract class IO extends IOConstants {
 	def listIterator( addr: Long ) =
 		getType( addr ) match {
 			case NIL => Iterator.empty
-			case LIST_ELEMS => elementsIterator
-			case _ => sys.error( "can only use 'arrayIterator' for an array" )
+			case LIST_ELEMS => listElemsIterator
+			case _ => sys.error( "can only use 'listIterator' for a list" )
 		}
 
 	//
@@ -822,11 +857,11 @@ abstract class IO extends IOConstants {
 		def checkdata( t: Int ): Unit = {
 			// todo: check if allocation block is the correct size
 			t match {
-				case NULL|NSTRING|FALSE|TRUE|EMPTY|NIL|BYTE|SHORT|INT|LONG =>
+				case NULL|NSTRING|FALSE|TRUE|EMPTY|EMPTY_ARRAY|NIL|BYTE|SHORT|INT|LONG =>
 				case BIGINT => sys.error( "BIGINT" )
 				case DOUBLE => sys.error( "DOUBLE" )
 				case Type1( SSTRING, l ) =>
-					push( "small string", adjust = 1 )
+					push( "small string", 1 )
 					checkif( 0 <= l && l <= 0xF, s"small string length out of range: $l", 1 )
 					skip( cwidth )
 					pop
@@ -890,8 +925,15 @@ abstract class IO extends IOConstants {
 					checkbig
 					chunk
 					pop
+				case ARRAY_ELEMS =>
+					push( "array", 1 )
+
+					for (_ <- 1L to checkbig)
+						checkvalue
+
+					pop
 				case LIST_ELEMS =>
-					push( "array", adjust = 1 )
+					push( "list", 1 )
 
 					val first = checkbig
 					val lastptr = pos
@@ -911,7 +953,7 @@ abstract class IO extends IOConstants {
 
 						var chunkelemcount = 0
 
-						push( "array chunk" )
+						push( "list chunk" )
 						push( "next chunk pointer" )
 						val cont = checkbig
 						pop
