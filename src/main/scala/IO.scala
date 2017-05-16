@@ -294,7 +294,7 @@ abstract class IO extends IOConstants {
 				case EMPTY => Map.empty
 				case MEMBERS => getObject
 				case NIL => Nil
-				case ELEMENTS => getList
+				case LIST_ELEMS => getList
 			}
 
 		pos = cur + vwidth
@@ -422,7 +422,7 @@ abstract class IO extends IOConstants {
 
 				val io = allocPad
 
-				io.putByte( ELEMENTS )
+				io.putByte( LIST_ELEMS )
 				io.putList( a )
 			case a => sys.error( "unknown type: " + a )
 		}
@@ -677,7 +677,7 @@ abstract class IO extends IOConstants {
 	def listIterator( addr: Long ) =
 		getType( addr ) match {
 			case NIL => Iterator.empty
-			case ELEMENTS => elementsIterator
+			case LIST_ELEMS => elementsIterator
 			case _ => sys.error( "can only use 'arrayIterator' for an array" )
 		}
 
@@ -890,7 +890,7 @@ abstract class IO extends IOConstants {
 					checkbig
 					chunk
 					pop
-				case ELEMENTS =>
+				case LIST_ELEMS =>
 					push( "array", adjust = 1 )
 
 					val first = checkbig
@@ -1099,7 +1099,7 @@ abstract class IO extends IOConstants {
 						remove( m + 1 )
 						remove( m + 1 + vwidth )
 					}
-				case ELEMENTS =>
+				case LIST_ELEMS =>
 					for ((_, e) <- listIterator( p ))
 						remove( e )
 				case _ =>

@@ -147,7 +147,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 		lazy val (freeptr, lenptr) =
 			io.getType( array ) match {
 				case NIL => sys.error( "can't have a cursor in an empty array" )
-				case ELEMENTS => (io.pos + 2*io.pwidth, io.pos + 3*io.pwidth)
+				case LIST_ELEMS => (io.pos + 2*io.pwidth, io.pos + 3*io.pwidth)
 				case t => sys.error( f"can only get a cursor for an array: $t%x, ${io.pos}%x" )
 			}
 
@@ -391,7 +391,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 		def insert( elem: Any ): Unit = {
 			io.getType( addr ) match {
 				case NIL => append( elem )
-				case ELEMENTS =>
+				case LIST_ELEMS =>
 					io.skipBig	// skip first chunk pointer
 					io.skipBig	// skip last chunk pointer
 
@@ -423,7 +423,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 		def appendSeq( s: TraversableOnce[Any] ) {
 			io.getType( addr ) match {
 				case NIL => io.putValue( addr, s )
-				case ELEMENTS =>
+				case LIST_ELEMS =>
 					val header = io.pos
 
 					io.skipBig	// skip first chunk pointer
@@ -449,7 +449,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 		def prependSeq( s: TraversableOnce[Any] ) {
 			io.getType( addr ) match {
 				case NIL => io.putValue( addr, s )
-				case ELEMENTS =>
+				case LIST_ELEMS =>
 					val header = io.pos
 					val first = io.getBig match {
 						case NUL => header + 4*io.pwidth
@@ -470,7 +470,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 		def length =
 			io.getType( addr ) match {
 				case NIL => 0L
-				case ELEMENTS => io.getBig( io.pos + 3*io.pwidth )
+				case LIST_ELEMS => io.getBig( io.pos + 3*io.pwidth )
 				case _ => sys.error( "can only use 'length' for an array" )
 			}
 		
@@ -500,7 +500,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 				case DOUBLE => "double"
 				case STRING => "string"
 				case NIL => "empty array"
-				case ELEMENTS => "array"
+				case LIST_ELEMS => "array"
 				case EMPTY => "empty object"
 				case MEMBERS => "object"
 			}
