@@ -897,7 +897,7 @@ abstract class IO extends IOConstants {
 					val lastptr = pos
 					val last =
 						checkbig match {
-							case NUL => pos + pwidth
+							case NUL => pos + 2*pwidth
 							case l => l
 						}
 					val freed = checkbig

@@ -28,7 +28,7 @@ object Main extends App {
 	}
 
 	val set = new HashSet[Map[String, Any]]
-	val insertions = 1
+	val insertions = 3
 
 	println( "insert" )
 
@@ -51,12 +51,12 @@ object Main extends App {
 	for (_ <- 1 to insertions/2) {
 		val doc = set.head
 
-//		prt( doc )
+		prt( doc )
 		coll remove doc
 		set -= doc
 	}
 
-//	db.io.dump
+	db.io.dump
 	db.io.check
 	println( coll.set == set, db.io.size )
 
@@ -65,13 +65,14 @@ object Main extends App {
 	for (_ <- 1 to insertions/2) {
 		val m = rnd( set )
 
-//		prt( m )
+		prt( m )
 		coll.insert( m )
 		set += m
 	}
 
-	println( coll.set == set, db.io.size )
+	db.io.dump
 	db.io.check
+	println( coll.set == set, db.io.size )
 	db.close
 
 }

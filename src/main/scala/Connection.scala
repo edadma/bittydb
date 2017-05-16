@@ -402,7 +402,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 						case chunk =>
 							val countptr = io.pos
 							val slot = io.getBig( chunk + 2*io.pwidth )
-							val nextfree = io.getBig( slot )
+							val nextfree = io.getBig( slot + 1 )
 
 							io.putBig( chunk + 2*io.pwidth, nextfree )
 
@@ -410,6 +410,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 								io.putBig( freeptr, io.getBig(chunk + io.pwidth) )
 
 							io.putValue( slot, elem )
+							io.finish
 							io.addBig( chunk + 4*io.pwidth, 1 )
 							io.addBig( countptr, 1 )
 					}
