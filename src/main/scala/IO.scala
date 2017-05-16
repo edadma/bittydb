@@ -295,6 +295,7 @@ abstract class IO extends IOConstants {
 				case MEMBERS => getObject
 				case EMPTY_ARRAY => Array()
 				case ARRAY_ELEMS => getArray
+				case ARRAY_MEMS => getArrayObject
 				case NIL => Nil
 				case LIST_ELEMS => getList
 			}
@@ -303,14 +304,24 @@ abstract class IO extends IOConstants {
 		res
 	}
 
+	def putAlloc( t: Int ) = {
+		putByte( POINTER )
+
+		val io = allocPad
+
+		io.putByte( t )
+		io
+	}
+
+	def putSimple( t: Int ) = {
+		putByte( t )
+		pad( cwidth )
+	}
+
 	def putValue( v: Any ) {
 		v match {
-			case null =>
-				putByte( NULL )
-				pad( cwidth )
-			case "" =>
-				putByte( NSTRING )
-				pad( cwidth )
+			case null => putSimple( NULL )
+			case "" => putSimple( NSTRING )
 			case b: Boolean =>
 				putBoolean( b )
 				pad( cwidth )
@@ -406,36 +417,12 @@ abstract class IO extends IOConstants {
 				}
 
 				pad( p )
-			case a: collection.Map[_, _] if a isEmpty =>
-				putByte( EMPTY )
-				pad( cwidth )
-			case a: collection.Map[_, _] =>
-				putByte( POINTER )
-
-				val io = allocPad
-
-				io.putByte( MEMBERS )
-				io.putObject( a )
-			case a: collection.IndexedSeq[_] if a isEmpty =>
-				putByte( EMPTY_ARRAY )
-				pad( cwidth )
-			case a: collection.IndexedSeq[_] =>
-				putByte( POINTER )
-
-				val io = allocPad
-
-				io.putByte( ARRAY_ELEMS )
-				io.putArray( a )
-			case a: collection.TraversableOnce[_] if a isEmpty =>
-				putByte( NIL )
-				pad( cwidth )
-			case a: collection.TraversableOnce[_] =>
-				putByte( POINTER )
-
-				val io = allocPad
-
-				io.putByte( LIST_ELEMS )
-				io.putList( a )
+			case a: collection.Map[_, _] if a isEmpty => putSimple( EMPTY )
+			case a: collection.Map[_, _] => putAlloc( ARRAY_MEMS ).putArrayObject( a )
+			case a: collection.IndexedSeq[_] if a isEmpty => putSimple( EMPTY_ARRAY )
+			case a: collection.IndexedSeq[_] => putAlloc( ARRAY_ELEMS ).putArray( a )
+			case a: collection.TraversableOnce[_] if a isEmpty => putSimple( NIL )
+			case a: collection.TraversableOnce[_] => putAlloc( LIST_ELEMS ).putList( a )
 			case a => sys.error( "unknown type: " + a )
 		}
 	}
@@ -448,6 +435,25 @@ abstract class IO extends IOConstants {
 	def putValue( addr: Long, v: Any ) {
 		pos = addr
 		putValue( v )
+	}
+
+	def putArrayObject( m: collection.Map[_, _] ): Unit = {
+		putBig( m.size*2 )
+
+		for ((k, v) <- m) {
+			putValue( k )
+			putValue( v )
+		}
+	}
+
+	def getArrayObject = {
+		val pairs =
+			for (_ <- 1L to getBig/2)
+				yield {
+					getValue -> getValue
+				}
+
+		Map( pairs: _* )
 	}
 
 	def getObject = {
@@ -511,22 +517,6 @@ abstract class IO extends IOConstants {
 		pos = addr
 		putPair( kv )
 	}
-
-	def arrayElemsIterator =
-		new AbstractIterator[Long] {
-			var count = getBig
-			var cur = pos
-
-			def hasNext = count > 0
-
-			def next = {
-				val res = cur
-
-				cur += cwidth
-				count -= 1
-				res
-			}
-		}
 
 	def getArray = arrayElemsIterator map getValue toList
 
@@ -646,6 +636,31 @@ abstract class IO extends IOConstants {
 							throw new NoSuchElementException( "next on empty objectIterator" )
 				}
 			case _ => sys.error( "can only use 'objectIterator' for an object" )
+		}
+
+	private def arrayElemsIterator =
+		new AbstractIterator[Long] {
+			var count = getBig
+			var cur = pos
+
+			def hasNext = count > 0
+
+			def next =
+				if (hasNext) {
+					val res = cur
+
+					cur += cwidth
+					count -= 1
+					res
+				} else
+					throw new NoSuchElementException( "next on empty arrayElemsIterator" )
+		}
+
+	def arrayIterator( addr: Long ) =
+		getType( addr ) match {
+			case NIL => Iterator.empty
+			case ARRAY_ELEMS => arrayElemsIterator
+			case _ => sys.error( "can only use 'arrayIterator' for an array" )
 		}
 
 	private def listElemsIterator = {
@@ -925,7 +940,7 @@ abstract class IO extends IOConstants {
 					checkbig
 					chunk
 					pop
-				case ARRAY_ELEMS =>
+				case ARRAY_ELEMS|ARRAY_MEMS =>
 					push( "array", 1 )
 
 					for (_ <- 1L to checkbig)
@@ -1144,6 +1159,13 @@ abstract class IO extends IOConstants {
 				case LIST_ELEMS =>
 					for ((_, e) <- listIterator( p ))
 						remove( e )
+				case ARRAY_ELEMS =>
+					arrayIterator( p ) foreach remove
+				case ARRAY_MEMS =>
+					for (m <- arrayObjectIterator( p )) {
+						remove( m )
+						remove( m + vwidth )
+					}
 				case _ =>
 			}
 			

@@ -28,7 +28,8 @@ object Main extends App {
 	}
 
 	val set = new HashSet[Map[String, Any]]
-	val insertions = 3
+	val insertions = 1
+	val deletions = 1
 
 	println( "insert" )
 
@@ -48,7 +49,7 @@ object Main extends App {
 
 	println( "\nremove" )
 
-	for (_ <- 1 to insertions/2) {
+	for (_ <- 1 to deletions) {
 		val doc = set.head
 
 		prt( doc )
@@ -62,7 +63,7 @@ object Main extends App {
 
 	println( "\ninsert" )
 
-	for (_ <- 1 to insertions/2) {
+	for (_ <- 1 to deletions) {
 		val m = rnd( set )
 
 		prt( m )

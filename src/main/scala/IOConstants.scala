@@ -24,6 +24,7 @@ trait IOConstants {
 	val ARRAY =				0xA0
 	val EMPTY_ARRAY =	ARRAY|0
 	val ARRAY_ELEMS =	ARRAY|1
+	val ARRAY_MEMS =	ARRAY|2
 	val LIST =				0xB0
 	val NIL =					LIST|0
 	val LIST_ELEMS =	LIST|1
