@@ -515,7 +515,7 @@ abstract class IO extends IOConstants {
 
 	def putListChunk( s: collection.TraversableOnce[Any], lengthio: IO, lengthptr: Long, contptr: Long = NUL ) {
 		putBig( contptr )	// continuation pointer
-		padBig	// next chunks with freed elements pointer
+		padBig	// next chunk with freed elements pointer
 		padBig	// free pointer
 
 		val lenptr = pos

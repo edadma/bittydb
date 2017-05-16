@@ -9,8 +9,8 @@ object Main extends App {
 	val db = Connection.mem( 'uuid -> false, 'pwidth -> 1, 'cwidth -> 1 )
 	val coll = db( "D" )
 
-	db.io.dump
-	db.io.check
+//	db.io.dump
+//	db.io.check
 
 	def rndAlpha = new String( Array.fill( 1 )((nextInt('z' - 'a') + 'a').toChar) )
 
@@ -28,19 +28,19 @@ object Main extends App {
 	}
 
 	val set = new HashSet[Map[String, Any]]
-	val insertions = 3
+	val insertions = 1
 
 	println( "insert" )
 
 	for (_ <- 1 to insertions) {
 		val m = rnd( set )
 
-//		prt( m )
+		prt( m )
 		coll.insert( m )
 		set += m
 	}
 
-//	db.io.dump
+	db.io.dump
 
 	try {db.io.check} catch {case e: Exception => println( e ); sys.exit(1)}
 

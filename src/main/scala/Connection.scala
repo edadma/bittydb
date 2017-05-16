@@ -397,10 +397,21 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 
 					val freeptr = io.pos
 
-					io.getBig( freeptr ) match {
+					io.getBig match {
 						case NUL => append( elem )
 						case chunk =>
-							
+							val countptr = io.pos
+							val slot = io.getBig( chunk + 2*io.pwidth )
+							val nextfree = io.getBig( slot )
+
+							io.putBig( chunk + 2*io.pwidth, nextfree )
+
+							if (nextfree == NUL)
+								io.putBig( freeptr, io.getBig(chunk + io.pwidth) )
+
+							io.putValue( slot, elem )
+							io.addBig( chunk + 4*io.pwidth, 1 )
+							io.addBig( countptr, 1 )
 					}
 				case _ => sys.error( "can only use 'insert' for an array" )
 			}

@@ -156,7 +156,7 @@ class Collection( parent: Connection#Pointer, name: String ) extends IOConstants
 		create
 		
 		for (d <- documents.asInstanceOf[Seq[Map[Any, Any]]])
-			c.append( if ((d contains "_id") || !parent.connection.io.uuidOption) d else d + ("_id" -> randomUUID) )
+			c.insert( if ((d contains "_id") || !parent.connection.io.uuidOption) d else d + ("_id" -> randomUUID) )
 	}
 	
 	override def toString = "collection " + name
