@@ -28,7 +28,7 @@ class Collection( parent: Connection#Pointer, name: String ) extends IOConstants
 				case None =>
 					false
 				case Some( p ) =>
-					require( (p.typ&0xF0) == LIST, "'collection' must be used in reference to an array" )
+					require( (p.typ&0xF0) == LIST, "'collection' must be used in reference to a list" )
 					
 					c = p
 					true

@@ -142,12 +142,12 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 	
 	override def toString = "connection to " + io
 	
-	class Cursor( array: Long, val chunk: Long, val elem: Long ) extends DBFilePointer( elem ) {
+	class Cursor( list: Long, val chunk: Long, val elem: Long ) extends DBFilePointer( elem ) {
 		lazy val (freeptr, lenptr) =
-			io.getType( array ) match {
-				case NIL => sys.error( "can't have a cursor in an empty array" )
+			io.getType( list ) match {
+				case NIL => sys.error( "can't have a cursor in an empty list" )
 				case LIST_ELEMS => (io.pos + 2*io.pwidth, io.pos + 3*io.pwidth)
-				case t => sys.error( f"can only get a cursor for an array: $t%x, ${io.pos}%x" )
+				case t => sys.error( f"can only get a cursor for an list: $t%x, ${io.pos}%x" )
 			}
 
 		def remove = {
@@ -437,7 +437,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 
 					cont.backpatch( io, header + io.pwidth )
 					cont.putListChunk( s, io, header + 3*io.pwidth )
-				case _ => sys.error( "can only use 'append' for an array" )
+				case _ => sys.error( "can only use 'append' for a list" )
 			}
 			
 			io.finish
@@ -460,7 +460,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 					val cont = io.alloc
 					
 					cont.putListChunk( s, io, header + 3*io.pwidth, first )
-				case _ => sys.error( "can only use 'prepend' for an array" )
+				case _ => sys.error( "can only use 'prepend' for a list" )
 			}
 			
 			io.finish
@@ -468,9 +468,10 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 		
 		def length =
 			io.getType( addr ) match {
-				case NIL => 0L
+				case NIL|EMPTY_ARRAY => 0L
 				case LIST_ELEMS => io.getBig( io.pos + 3*io.pwidth )
-				case _ => sys.error( "can only use 'length' for an array" )
+				case ARRAY_ELEMS => io.getBig
+				case _ => sys.error( "can only use 'length' for an array or a list" )
 			}
 		
 		def cursor = io listIterator addr map {case (chunk, elem) => new Cursor(addr, chunk, elem)}
