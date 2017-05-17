@@ -12,7 +12,7 @@ trait IOConstants {
 	val SHORT =				INTEGER|1
 	val INT =					INTEGER|2
 	val LONG =				INTEGER|3
-	val BIGINT =			0x30
+	val BIGINT =			INTEGER|4
 	val DOUBLE =			0x40
 	val DECIMAL =			0x50
 	val SSTRING =			0x60	// with length - 1 in low nibble
@@ -29,8 +29,10 @@ trait IOConstants {
 	val NIL =					LIST|0
 	val LIST_ELEMS =	LIST|1
 	val POINTER =			0xC0
-	val TIMESTAMP =		0xD0
-	val DATETIME =		0xE0
+	val TEMPORAL =		0xD0
+	val TIMESTAMP =		TEMPORAL|0
+	val DATETIME =		TEMPORAL|1
+	val BLOB =				0xE0
 	val TYPE =				0xF0
 	val DELETED =			0xFF
 	

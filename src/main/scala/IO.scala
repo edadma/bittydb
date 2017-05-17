@@ -3,7 +3,7 @@ package xyz.hyperreal.bittydb
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
 import java.time.{Instant, OffsetDateTime, ZoneOffset}
-import java.util.UUID
+import java.util.{NoSuchElementException, UUID}
 
 import collection.AbstractIterator
 import collection.mutable.{ArrayBuffer, ArrayStack, ListBuffer}
@@ -298,6 +298,7 @@ abstract class IO extends IOConstants {
 				case ARRAY_MEMS => getArrayObject
 				case NIL => Nil
 				case LIST_ELEMS => getList
+				case BLOB => getBlob
 			}
 
 		pos = cur + vwidth
@@ -423,6 +424,7 @@ abstract class IO extends IOConstants {
 			case a: collection.IndexedSeq[_] => putAlloc( ARRAY_ELEMS ).putArray( a )
 			case a: collection.TraversableOnce[_] if a isEmpty => putSimple( NIL )
 			case a: collection.TraversableOnce[_] => putAlloc( LIST_ELEMS ).putList( a )
+			case a: Blob => putAlloc( BLOB ).putBlob( a )
 			case a => sys.error( "unknown type: " + a )
 		}
 	}
@@ -435,6 +437,13 @@ abstract class IO extends IOConstants {
 	def putValue( addr: Long, v: Any ) {
 		pos = addr
 		putValue( v )
+	}
+
+	def getBlob = new IOBlob( this, pos + 4, getInt )
+
+	def putBlob( a: Blob ): Unit = {
+		putInt( a.size )
+		a foreach (putByte(_))
 	}
 
 	def putArrayObject( m: collection.Map[_, _] ): Unit = {
@@ -567,6 +576,26 @@ abstract class IO extends IOConstants {
 	//
 	// Iterators
 	//
+
+	def byteIterator( addr: Long, size: Int ) = {
+		require( size >= 0, "size must be non-negative" )
+
+		new Iterator[Byte] {
+			var cur = addr
+
+			def hasNext = cur - size < addr
+
+			def next = {
+				if (hasNext) {
+					val res = getByte( cur )
+
+					cur += 1
+					res.toByte
+				} else
+					throw new NoSuchElementException
+			}
+		}
+	}
 
 	def objectIterator( addr: Long ): Iterator[Long] =
 		getType( addr ) match {
