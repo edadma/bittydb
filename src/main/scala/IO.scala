@@ -418,7 +418,7 @@ abstract class IO extends IOConstants {
 
 				pad( p )
 			case a: collection.Map[_, _] if a isEmpty => putSimple( EMPTY )
-			case a: collection.Map[_, _] => putAlloc( ARRAY_MEMS ).putArrayObject( a )
+			case a: collection.Map[_, _] => putAlloc( MEMBERS ).putObject( a )//putAlloc( ARRAY_MEMS ).putArrayObject( a )
 			case a: collection.IndexedSeq[_] if a isEmpty => putSimple( EMPTY_ARRAY )
 			case a: collection.IndexedSeq[_] => putAlloc( ARRAY_ELEMS ).putArray( a )
 			case a: collection.TraversableOnce[_] if a isEmpty => putSimple( NIL )
@@ -661,6 +661,25 @@ abstract class IO extends IOConstants {
 			case NIL => Iterator.empty
 			case ARRAY_ELEMS => arrayElemsIterator
 			case _ => sys.error( "can only use 'arrayIterator' for an array" )
+		}
+
+	def arrayObjectIterator( addr: Long ) =
+		getType( addr ) match {
+			case NIL => Iterator.empty
+			case ARRAY_MEMS =>
+				new Iterator[Long] {
+					val it = arrayElemsIterator
+
+					def hasNext = it.hasNext
+
+					def next = {
+						val res = it.next
+
+						it.next // discard every second value
+						res
+					}
+				}
+			case _ => sys.error( "can only use 'arrayObjectIterator' for an object (stored as an array)" )
 		}
 
 	private def listElemsIterator = {

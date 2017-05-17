@@ -28,7 +28,7 @@ class Collection( parent: Connection#Pointer, name: String ) extends IOConstants
 				case None =>
 					false
 				case Some( p ) =>
-					require( (p.kind&0xF0) == LIST, "'collection' must be used in reference to an array" )
+					require( (p.typ&0xF0) == LIST, "'collection' must be used in reference to an array" )
 					
 					c = p
 					true
@@ -55,7 +55,7 @@ class Collection( parent: Connection#Pointer, name: String ) extends IOConstants
 		check
 		c.cursor filter {
 			m =>
-				(m.kind&0xF0) == OBJECT && {
+				m.isMap && {
 					val d = m.getAs[Map[Any, Any]]
 					
 					query forall {
@@ -95,7 +95,7 @@ class Collection( parent: Connection#Pointer, name: String ) extends IOConstants
 	def remove( cursor: Iterator[Connection#Cursor] ) =
 		if (check) {
 			var count = 0
-			
+
 			for (v <- cursor) {
 				v.remove
 				count += 1

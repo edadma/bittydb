@@ -127,7 +127,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 		io.objectIterator( rootPtr ) map {
 			a =>
 				val name = io.getValue( a + 1 ).asInstanceOf[String]
-				
+
 				name -> new Collection( root, name )
 		}
 	
@@ -485,10 +485,16 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 			new Cursor(addr, chunk, elem)
 		}
 		
-		def kind = io getType addr
-		
+		def typ = io getType addr
+
+		def isMap =
+			typ match {
+				case EMPTY|MEMBERS|ARRAY_MEMS => true
+				case _ => false
+			}
+
 		override def toString =
-			kind match {
+			typ match {
 				case NULL => "null"
 				case FALSE => "false"
 				case TRUE => "true"
@@ -498,8 +504,8 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 				case LONG => "long integer"
 				case DOUBLE => "double"
 				case STRING => "string"
-				case NIL => "empty array"
-				case LIST_ELEMS => "array"
+				case NIL => "empty list"
+				case LIST_ELEMS => "list"
 				case EMPTY => "empty object"
 				case MEMBERS => "object"
 			}
