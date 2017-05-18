@@ -69,11 +69,16 @@ class MemIO extends IO
 		res
 	}
 	
-	def putBytes( a: Array[Byte] ) = {
+	def putBytes( a: Array[Byte] ) {
 		buf.putting( a.length )
 		buf.buffer.put( a )
 	}
-	
+
+	def putBytes( a: Array[Byte], offset: Int, length: Int ): Unit = {
+		buf.putting( a.length )
+		buf.buffer.put( a, offset, length )
+	}
+
 	def getUnsignedByte: Int = getByte&0xFF
 	
 	def getChar: Char = {

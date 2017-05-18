@@ -46,7 +46,9 @@ class DiskIO( f: File ) extends IO
 	}
 	
 	def putBytes( a: Array[Byte] ) = file.write( a )
-	
+
+	def putBytes( a: Array[Byte], offset: Int, length: Int ) = file.write( a, offset, length )
+
 	def getUnsignedByte: Int = file.readUnsignedByte
 	
 	def getChar: Char = file.readChar

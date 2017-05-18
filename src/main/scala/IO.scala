@@ -1,5 +1,6 @@
 package xyz.hyperreal.bittydb
 
+import java.io.InputStream
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
 import java.time.{Instant, OffsetDateTime, ZoneOffset}
@@ -65,7 +66,9 @@ abstract class IO extends IOConstants {
 	def getBytes( len: Int ): Array[Byte]
 	
 	def putBytes( a: Array[Byte] )
-	
+
+	def putBytes( a: Array[Byte], offset: Int, length: Int )
+
 	def getUnsignedByte: Int
 
 	def getChar: Char
@@ -439,11 +442,19 @@ abstract class IO extends IOConstants {
 		putValue( v )
 	}
 
-	def getBlob = new IOBlob( this, pos + 4, getInt )
+	def getBlob = new IOBlob( this, pos + pwidth, getBig )
 
 	def putBlob( a: Blob ): Unit = {
-		putInt( a.size )
-		a foreach (putByte(_))
+		putBig( a.length )
+
+		val s = a.stream
+		val buf = new Array[Byte]( 1000 )
+		var len = 0
+
+		while ({len = s.read( buf ); len != -1})
+			putBytes( buf, 0, len )
+
+		s.close
 	}
 
 	def putArrayObject( m: collection.Map[_, _] ): Unit = {
@@ -573,29 +584,27 @@ abstract class IO extends IOConstants {
 		lengthio.addBig( lengthptr, count )
 	}
 
-	//
-	// Iterators
-	//
-
-	def byteIterator( addr: Long, size: Int ) = {
+	def byteInputStream( addr: Long, length: Long ) = {
 		require( size >= 0, "size must be non-negative" )
 
-		new Iterator[Byte] {
+		new InputStream {
 			var cur = addr
 
-			def hasNext = cur - size < addr
-
-			def next = {
-				if (hasNext) {
+			def read = {
+				if (cur < addr + length) {
 					val res = getByte( cur )
 
 					cur += 1
-					res.toByte
+					res
 				} else
-					throw new NoSuchElementException
+					-1
 			}
 		}
 	}
+
+	//
+	// Iterators
+	//
 
 	def objectIterator( addr: Long ): Iterator[Long] =
 		getType( addr ) match {
