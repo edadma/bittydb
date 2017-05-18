@@ -4,7 +4,7 @@ import java.io.File
 import java.nio.charset.Charset
 
 import util.Either
-import collection.{LinearSeq, TraversableOnce, Map => CMap}
+import collection.{LinearSeq, Map => CMap}
 import collection.mutable.AbstractMap
 import xyz.hyperreal.lia.Math
 

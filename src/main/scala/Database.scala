@@ -1,6 +1,6 @@
 package xyz.hyperreal.bittydb
 
-import java.io.{RandomAccessFile, File}
+import java.io.File
 
 
 object Database {
@@ -24,7 +24,7 @@ object Database {
 				Connection.disk( f ).close
 				true
 			} catch {
-				case e: InvalidDatabaseException => false
+				case _: InvalidDatabaseException => false
 			}
 		else
 			sys.error( "non-existent" )

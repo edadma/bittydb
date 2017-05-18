@@ -7,7 +7,7 @@ import java.time.{Instant, OffsetDateTime, ZoneOffset}
 import java.util.{NoSuchElementException, UUID}
 
 import collection.AbstractIterator
-import collection.mutable.{ArrayBuffer, ArrayStack, ListBuffer}
+import collection.mutable.{ArrayStack, ListBuffer}
 
 
 object IO {
@@ -836,7 +836,7 @@ abstract class IO extends IOConstants {
 
 	def check: Unit = {
 		val stack = new ArrayStack[String]
-		val reclaimed = new ArrayBuffer[(Long, Long)]
+//		val reclaimed = new ArrayBuffer[(Long, Long)]	//todo: use in checking reclaimed storage
 
 		def problem( msg: String, adjust: Int = 0 ) {
 			println( f"${pos - adjust}%16x: $msg" )
@@ -1014,7 +1014,7 @@ abstract class IO extends IOConstants {
 							case NUL => pos + 2*pwidth
 							case l => l
 						}
-					val freed = checkbig
+					/*val freed =*/ checkbig	//todo: use freed check free list
 					val countptr = pos
 					val count = checkbig
 
@@ -1031,11 +1031,11 @@ abstract class IO extends IOConstants {
 						pop
 
 						push( "next freed pointer" )
-						val nfree = checkbig
+						/*val nfree =*/ checkbig	//todo: use nfree to check free list
 						pop
 
 						push( "free pointer" )
-						val free = checkbig
+						/*val free =*/ checkbig	//todo: use free to check free list
 						pop
 
 						push( "chunk length" )
