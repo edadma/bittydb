@@ -146,7 +146,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 		lazy val (freeptr, lenptr) =
 			io.getType( list ) match {
 				case NIL => sys.error( "can't have a cursor in an empty list" )
-				case LIST_ELEMS => (io.pos + 2*io.pwidth, io.pos + 3*io.pwidth)
+				case LIST_ELEMS => (io.pos + io.pwidth, io.pos + 2*io.pwidth)
 				case t => sys.error( f"can only get a cursor for an list: $t%x, ${io.pos}%x" )
 			}
 
@@ -391,7 +391,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 			io.getType( addr ) match {
 				case NIL => append( elem )
 				case LIST_ELEMS =>
-					io.skipBig	// skip first chunk pointer
+//					io.skipBig	// skip first chunk pointer
 					io.skipBig	// skip last chunk pointer
 
 					val freeptr = io.pos
@@ -425,7 +425,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 				case LIST_ELEMS =>
 					val header = io.pos
 
-					io.skipBig	// skip first chunk pointer
+//					io.skipBig	// skip first chunk pointer
 					io.getBig match {
 						case NUL =>
 							io.skipBig		// skip free pointer
@@ -435,41 +435,41 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 
 					val cont = io.alloc
 
-					cont.backpatch( io, header + io.pwidth )
-					cont.putListChunk( s, io, header + 3*io.pwidth )
+					cont.backpatch( io, header )
+					cont.putListChunk( s, io, header + 2*io.pwidth )
 				case _ => sys.error( "can only use 'append' for a list" )
 			}
 			
 			io.finish
 		}
 		
-		def prepend( elems: Any* ) = prependSeq( elems.toList )
-		
-		def prependSeq( s: LinearSeq[Any] ) {
-			io.getType( addr ) match {
-				case NIL => io.putValue( addr, s )
-				case LIST_ELEMS =>
-					val header = io.pos
-					val first = io.getBig match {
-						case NUL => header + 4*io.pwidth
-						case p => p
-					}
-
-					io.pos = header
-					
-					val cont = io.alloc
-					
-					cont.putListChunk( s, io, header + 3*io.pwidth, first )
-				case _ => sys.error( "can only use 'prepend' for a list" )
-			}
-			
-			io.finish
-		}
+//		def prepend( elems: Any* ) = prependSeq( elems.toList )
+//
+//		def prependSeq( s: LinearSeq[Any] ) {
+//			io.getType( addr ) match {
+//				case NIL => io.putValue( addr, s )
+//				case LIST_ELEMS =>
+//					val header = io.pos
+//					val first = io.getBig match {
+//						case NUL => header + 4*io.pwidth
+//						case p => p
+//					}
+//
+//					io.pos = header
+//
+//					val cont = io.alloc
+//
+//					cont.putListChunk( s, io, header + 3*io.pwidth, first )
+//				case _ => sys.error( "can only use 'prepend' for a list" )
+//			}
+//
+//			io.finish
+//		}
 		
 		def length =
 			io.getType( addr ) match {
 				case NIL|EMPTY_ARRAY => 0L
-				case LIST_ELEMS => io.getBig( io.pos + 3*io.pwidth )
+				case LIST_ELEMS => io.getBig( io.pos + 2*io.pwidth )
 				case ARRAY_ELEMS => io.getBig
 				case _ => sys.error( "can only use 'length' for an array or a list" )
 			}
@@ -506,6 +506,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 				case DOUBLE => "double"
 				case STRING => "string"
 				case NIL => "empty list"
+				case ARRAY_ELEMS => "array"
 				case LIST_ELEMS => "list"
 				case EMPTY => "empty object"
 				case MEMBERS => "object"

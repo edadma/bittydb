@@ -548,7 +548,7 @@ abstract class IO extends IOConstants {
 	def getList = listElemsIterator map {case (_, e) => getValue( e )} toList
 
 	def putList( s: collection.TraversableOnce[Any] ) {
-		padBig	// first chunk pointer
+//		padBig	// first chunk pointer
 		padBig	// last chunk pointer
 		padBig	// chunks with freed elements list pointer
 
@@ -722,11 +722,11 @@ abstract class IO extends IOConstants {
 
 	private def listElemsIterator = {
 		val header = pos
-		val first =
-			getBig match {
-				case NUL => header + 4*pwidth
-				case p => p
-			}
+		val first = header + 3*pwidth
+//			getBig match {
+//				case NUL => header + 4*pwidth
+//				case p => p
+//			}
 
 		new AbstractIterator[(Long, Long)] {
 			var cont: Long = _
@@ -1007,7 +1007,7 @@ abstract class IO extends IOConstants {
 				case LIST_ELEMS =>
 					push( "list", 1 )
 
-					val first = checkbig
+//					val first = checkbig
 					val lastptr = pos
 					val last =
 						checkbig match {
@@ -1075,8 +1075,8 @@ abstract class IO extends IOConstants {
 						pop
 					}
 
-					if (first != NUL)
-						checkpos( first, pwidth )
+//					if (first != NUL)
+//						checkpos( first, pwidth )
 
 					chunk
 					pos = countptr
