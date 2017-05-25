@@ -476,7 +476,7 @@ abstract class IO extends IOConstants {
 		Map( pairs: _* )
 	}
 
-	def getListObject = listElemsIterator grouped 2 map {case Seq((_, k), (_, v)) => (getValue( k ), getValue( v ))} toList
+	def getListObject = listElemsIterator grouped 2 map {case Seq((_, k), (_, v)) => (getValue( k ), getValue( v ))} toMap
 
 	def putListObject( m: collection.Map[_, _] ): Unit = putList( m.iterator.flatMap(p => p.productIterator) )
 
@@ -485,7 +485,7 @@ abstract class IO extends IOConstants {
 		putListObject( m )
 	}
 
-	def getArray = arrayElemsIterator map getValue toList
+	def getArray = arrayElemsIterator map getValue toVector
 
 	def putArray( a: collection.IndexedSeq[Any] ): Unit = {
 		putBig( a.length )
@@ -857,7 +857,8 @@ abstract class IO extends IOConstants {
 							case l => l
 						}
 					/*val freed =*/ checkbig	//todo: use freed check free list
-					val countptr = pos
+
+						val countptr = pos
 					val count = checkbig
 
 					var elemcount = 0

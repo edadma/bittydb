@@ -78,20 +78,7 @@ class MethodTests extends FreeSpec with PropertyChecks with Matchers
 		db.root.get shouldBe Map( "a" -> List(1, 2, 2.5, "asdfasdfasdf", "qwerqwerqwer", 3) )
 		db.root( "a" ).length shouldBe 6
 	}
-	
-//	"prepend/length" in
-//	{
-//	val db = Connection.mem()
-//
-//		db.root.set( "a" -> Nil )
-//		db.root( "a" ).prepend( 1 )
-//		db.root.get shouldBe Map( "a" -> List(1) )
-//		db.root( "a" ).length shouldBe 1
-//		db.root( "a" ).prepend( 2 )
-//		db.root.get shouldBe Map( "a" -> List(2, 1) )
-//		db.root( "a" ).length shouldBe 2
-//	}
-	
+
 	"listIterator" in
 	{
 	val db = Connection.mem()
@@ -101,9 +88,7 @@ class MethodTests extends FreeSpec with PropertyChecks with Matchers
 
 		db.root( "a" ).append( 5 )
 		db.root( "a" ).elements.toList shouldBe List( 5 )
-//		db.root( "a" ).prepend( 1, 2 )
 		db.root( "a" ).append( 3, 4 )
-//		db.root( "a" ).prepend( 4 )
 		db.root( "a" ).get shouldBe List( 5, 3, 4 )
 
 		db.root( "a" ).cursor.drop(2).next.put( "happy" )

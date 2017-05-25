@@ -301,8 +301,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 		def insert( elem: Any ): Unit = {
 			io.getType( addr ) match {
 				case NIL => append( elem )
-				case LIST_ELEMS =>
-//					io.skipBig	// skip first chunk pointer
+				case LIST_ELEMS|LIST_MEMS =>
 					io.skipBig	// skip last chunk pointer
 
 					val freeptr = io.pos
@@ -333,10 +332,9 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 		def appendSeq( s: LinearSeq[Any] ) {
 			io.getType( addr ) match {
 				case NIL => io.putValue( addr, s )
-				case LIST_ELEMS =>
+				case LIST_ELEMS|LIST_MEMS =>
 					val header = io.pos
 
-//					io.skipBig	// skip first chunk pointer
 					io.getBig match {
 						case NUL =>
 							io.skipBig		// skip free pointer
