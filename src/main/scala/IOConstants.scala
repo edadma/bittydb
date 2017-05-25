@@ -18,9 +18,7 @@ trait IOConstants {
 	val SSTRING =			0x60	// with length - 1 in low nibble
 	val STRING =			0x70	// with encoding included and length size in low nibble
 	val UUID =				0x80
-	val OBJECT =			0x90
-	val EMPTY =				OBJECT|0
-	val MEMBERS =			OBJECT|1
+	val EMPTY =				0x90
 	val ARRAY =				0xA0
 	val EMPTY_ARRAY =	ARRAY|0
 	val ARRAY_ELEMS =	ARRAY|1
@@ -28,6 +26,7 @@ trait IOConstants {
 	val LIST =				0xB0
 	val NIL =					LIST|0
 	val LIST_ELEMS =	LIST|1
+	val LIST_MEMS =		LIST|2
 	val POINTER =			0xC0
 	val TEMPORAL =		0xD0
 	val TIMESTAMP =		TEMPORAL|0

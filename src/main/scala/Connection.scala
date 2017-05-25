@@ -124,9 +124,9 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 	def get( key: String ): Option[Collection] = if (root.key(key).isEmpty) None else Some( default(key) )
 	
 	def iterator: Iterator[(String, Collection)] =
-		io.objectIterator( rootPtr ) map {
-			a =>
-				val name = io.getValue( a + 1 ).asInstanceOf[String]
+		io.listObjectIterator( rootPtr ) map {
+			case (k, _) =>
+				val name = io.getValue( k ).asInstanceOf[String]
 
 				name -> new Collection( root, name )
 		}
@@ -227,7 +227,8 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 		def in( s: Set[Any] ) = s( get )
 		
 		def nin( s: Set[Any] ) = !s( get )
-		
+
+		// todo: this looks wrong: "io.remove( addr )" won't work right: discard this method maybe
 		def put( v: Any ) {
 			v match {
 				case m: CMap[_, _] if addr == rootPtr && m.isEmpty =>
@@ -237,8 +238,8 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 				case m: CMap[_, _] if addr == rootPtr =>
 					io.size = rootPtr
 					io.pos = io.size
-					io.putByte( addr, MEMBERS )
-					io.putObject( m )
+					io.putByte( addr, LIST_MEMS )
+					io.putListObject( m )
 				case _ if addr == rootPtr => sys.error( "can only 'put' an object at root" )
 				case _ =>
 					io.remove( addr )
@@ -248,139 +249,49 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 			io.finish
 		}
 	
-		def list = io.objectIterator( addr ) map {a => io.getValue( a + 1 ) -> new DBFilePointer( io.pos )} toList
+//		def list = io.objectIterator( addr ) map {a => io.getValue( a + 1 ) -> new DBFilePointer( io.pos )} toList	//todo: recode
 		
-		private [bittydb] def lookup( key: Any ): Either[Option[Long], Long] = {
-			var where: Option[Long] = None
-			
-			def chunk: Option[Long] = {
-				val cont = io.getBig
-				val len = io.getBig
-				val start = io.pos
-				
-				while (io.pos - start < len) {
-					val addr = io.pos
-					
-					if (io.getUnsignedByte == USED)
-						if (io.getValue == key)
-							return Some( addr )
-						else
-							io.skipValue
-					else {
-						if (where.isEmpty)
-							where = Some( io.pos - 1 )
-							
-						io.skipValue
-						io.skipValue
-					}
-				}
-				
-				if (cont != NUL) {
-					io.pos = cont
-					chunk
-				}
-				else
-					None
-			}
-			
-			io.skipBig
-			
-			chunk match {
-				case Some( addr ) => Right( addr )
-				case None => Left( where )
-			}
+		private [bittydb] def lookup( key: Any ): Option[Long] = {
+			for ((k, v) <- io.listObjectIterator( addr ))
+				if (key == io.getValue( k ))
+					return Some( v )
+
+			None
 		}
-		
+
+		// todo: this isn't correct: use code from other remove() method - needs list, chunk and element addresses: remove elements in reverse order so set() works right
 		def remove( key: Any ) =
-			io.getType( addr ) match {
-				case EMPTY => false
-				case MEMBERS =>
-					lookup( key ) match {
-						case Left( _ ) => false
-						case Right( at ) =>
-							io.putByte( at, UNUSED )
-							io.remove( at + 1 )
-							io.remove( at + 1 + io.vwidth )
-							true
-					}
-				case _ => sys.error( "can only use 'remove' for an object" )
+			lookup( key ) match {
+				case None => false
+				case Some( at ) =>
+					io.remove( at + io.vwidth )
+					io.remove( at )
+					true
 			}
-		
-		def key( k: Any ): Option[DBFilePointer] =
-			io.getType( addr ) match {
-				case MEMBERS =>
-					lookup( k ) match {
-						case Left( _ ) => None
-						case Right( at ) => Some( new DBFilePointer(at + 1 + io.vwidth) )
-					}
-				case _ => None
-			}
-		
-//		private [bittydb] def ending =
-//			io.getType( addr ) match {
-//				case t@(MEMBERS|ELEMENTS) =>
-//					if (t == ELEMENTS) {
-//						io.skipBig
-//						io.skipBig
-//					}
-//
-//					io.getBig match {
-//						case NUL =>
-//						case addr => io.pos = addr
-//					}
-//
-//					io.skipBig
-//
-//					val res = io.pos + io.pwidth + io.getBig == io.size
-//
-//					io.pos -= 2*io.pwidth
-//					res
-//				case STRING => sys.error( "not yet" )
-//				case BIGINT => sys.error( "not yet" )
-//				case DECIMAL => sys.error( "not yet" )
-//			}
-			
+
+		def key( k: Any ): Option[DBFilePointer] = lookup( k ) map (new DBFilePointer(_))
+
 		def set( kv: (Any, Any) ) =
 			io.getType( addr ) match {
 				case EMPTY if addr == rootPtr =>
-					io.putByte( addr, MEMBERS )
-					io.putObject( Map(kv) )
+					io.putByte( addr, LIST_MEMS )
+					io.putListObject( Map(kv) )
 					io.finish
 					false
 				case EMPTY =>
 					io.putValue( addr, Map(kv) )
 					io.finish
 					false
-				case MEMBERS =>
-					val header = io.pos
-					
+				case LIST_MEMS =>
 					lookup( kv._1 ) match {
-						case Left( None ) =>
-// 							if (ending) {
-// 								io.skipBig
-// 								io.addBig( io.pwidth )
-// 								io.append
-// 								io.putPair( kv )
-// 							} else {
-								io.getBig( header ) match {
-									case NUL =>
-									case last => io.pos = last
-								}
-								
-								val cont = io.allocPad
-								
-								cont.backpatch( io, header )
-								cont.putObjectChunk( Map(kv) )
-//							}
-							
-							io.finish
+						case None =>
+							// todo: care needs to be taken in case reclaimed storage is available which gets unfreed in reverse order
+							insert( kv._1 )
+							insert( kv._2 )
 							false
-						case Left( Some(insertion) ) =>
-							io.putPair( insertion, kv )
-							io.finish
-							false
-						case Right( _ ) =>
-							io.putValue( kv._2 )
+						case Some( addr ) =>
+							io.remove( addr )
+							io.putValue( addr, kv._2 )
 							io.finish
 							true
 					}
@@ -442,35 +353,14 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 			
 			io.finish
 		}
-		
-//		def prepend( elems: Any* ) = prependSeq( elems.toList )
-//
-//		def prependSeq( s: LinearSeq[Any] ) {
-//			io.getType( addr ) match {
-//				case NIL => io.putValue( addr, s )
-//				case LIST_ELEMS =>
-//					val header = io.pos
-//					val first = io.getBig match {
-//						case NUL => header + 4*io.pwidth
-//						case p => p
-//					}
-//
-//					io.pos = header
-//
-//					val cont = io.alloc
-//
-//					cont.putListChunk( s, io, header + 3*io.pwidth, first )
-//				case _ => sys.error( "can only use 'prepend' for a list" )
-//			}
-//
-//			io.finish
-//		}
-		
+
 		def length =
 			io.getType( addr ) match {
-				case NIL|EMPTY_ARRAY => 0L
+				case NIL|EMPTY_ARRAY|EMPTY => 0L
 				case LIST_ELEMS => io.getBig( io.pos + 2*io.pwidth )
+				case LIST_MEMS => io.getBig( io.pos + 2*io.pwidth )/2
 				case ARRAY_ELEMS => io.getBig
+				case ARRAY_MEMS => io.getBig/2
 				case _ => sys.error( "can only use 'length' for an array or a list" )
 			}
 		
@@ -490,7 +380,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 
 		def isMap =
 			typ match {
-				case EMPTY|MEMBERS|ARRAY_MEMS => true
+				case EMPTY|LIST_MEMS|ARRAY_MEMS => true
 				case _ => false
 			}
 
@@ -507,9 +397,10 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 				case STRING => "string"
 				case NIL => "empty list"
 				case ARRAY_ELEMS => "array"
+				case ARRAY_MEMS => "array object"
 				case LIST_ELEMS => "list"
+				case LIST_MEMS => "list object"
 				case EMPTY => "empty object"
-				case MEMBERS => "object"
 			}
 	}
 }

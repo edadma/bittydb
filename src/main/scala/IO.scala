@@ -295,12 +295,12 @@ abstract class IO extends IOConstants {
 					else
 						getString( len )
 				case EMPTY => Map.empty
-				case MEMBERS => getObject
 				case EMPTY_ARRAY => Array()
 				case ARRAY_ELEMS => getArray
 				case ARRAY_MEMS => getArrayObject
 				case NIL => Nil
 				case LIST_ELEMS => getList
+				case LIST_MEMS => getListObject
 				case BLOB => getBlob
 			}
 
@@ -422,7 +422,7 @@ abstract class IO extends IOConstants {
 
 				pad( p )
 			case a: collection.Map[_, _] if a isEmpty => putSimple( EMPTY )
-			case a: collection.Map[_, _] => putAlloc( MEMBERS ).putObject( a )//putAlloc( ARRAY_MEMS ).putArrayObject( a )
+			case a: collection.Map[_, _] => putAlloc( LIST_MEMS ).putListObject( a )//putAlloc( ARRAY_MEMS ).putArrayObject( a )
 			case a: collection.IndexedSeq[_] if a isEmpty => putSimple( EMPTY_ARRAY )
 			case a: collection.IndexedSeq[_] => putAlloc( ARRAY_ELEMS ).putArray( a )
 			case a: collection.TraversableOnce[_] if a isEmpty => putSimple( NIL )
@@ -476,66 +476,13 @@ abstract class IO extends IOConstants {
 		Map( pairs: _* )
 	}
 
-	def getObject = {
-		var map = Map.empty[Any, Any]
+	def getListObject = listElemsIterator grouped 2 map {case Seq((_, k), (_, v)) => (getValue( k ), getValue( v ))} toList
 
-		def chunk {
-			val cont = getBig
-			val len = getBig
-			val start = pos
+	def putListObject( m: collection.Map[_, _] ): Unit = putList( m.iterator.flatMap(p => p.productIterator) )
 
-			while (pos - start < len) {
-				if (getUnsignedByte == USED)
-					map += getValue -> getValue
-				else {
-					skipValue
-					skipValue
-				}
-			}
-
-			if (cont != NUL) {
-				pos = cont
-				chunk
-			}
-		}
-
-		skipBig		// skip last chunk pointer
-		chunk
-		map
-	}
-
-	def putObject( m: collection.Map[_, _] ) {
-		padBig		//putBig( pos + pwidth )	// last chunk pointer
-		putObjectChunk( m )
-	}
-
-	def putObject( addr: Long, m: collection.Map[_, _] ) {
+	def putListObject( addr: Long, m: collection.Map[_, _] ) {
 		pos = addr
-		putObject( m )
-	}
-
-	def putObjectChunk( m: collection.Map[_, _] ) {
-		padBig	// continuation pointer
-
-		val start = pos
-
-		padBig	// size of object in bytes
-
-		for (p <- m)
-			putPair( p )
-
-		putBig( start, pos - start - pwidth )
-	}
-
-	def putPair( kv: (Any, Any) ) {
-		putByte( USED )
-		putValue( kv._1 )
-		putValue( kv._2 )
-	}
-
-	def putPair( addr: Long, kv: (Any, Any) ) {
-		pos = addr
-		putPair( kv )
+		putListObject( m )
 	}
 
 	def getArray = arrayElemsIterator map getValue toList
@@ -548,7 +495,6 @@ abstract class IO extends IOConstants {
 	def getList = listElemsIterator map {case (_, e) => getValue( e )} toList
 
 	def putList( s: collection.TraversableOnce[Any] ) {
-//		padBig	// first chunk pointer
 		padBig	// last chunk pointer
 		padBig	// chunks with freed elements list pointer
 
@@ -606,75 +552,13 @@ abstract class IO extends IOConstants {
 	// Iterators
 	//
 
-	def objectIterator( addr: Long ): Iterator[Long] =
+	def listObjectIterator( addr: Long ): Iterator[(Long, Long)] =
 		getType( addr ) match {
 			case EMPTY => Iterator.empty
-			case MEMBERS =>
-				val header = pos
-
-				new AbstractIterator[Long] {
-					var cont: Long = _
-					var chunksize: Long = _
-					var cur: Long = _
-					var scan = false
-					var done = false
-
-					chunk( header + pwidth )
-
-					private def chunk( p: Long ) {
-						cont = getBig( p )
-						chunksize = getBig
-						cur = pos
-					}
-
-					def hasNext = {
-						def advance = {
-							chunksize -= twidth
-
-							if (chunksize == 0)
-								if (cont == NUL) {
-									done = true
-									false
-								} else {
-									chunk( cont )
-									true
-								}
-							else {
-								cur += twidth
-								true
-							}
-						}
-
-						def nextused: Boolean =
-							if (advance)
-								if (getUnsignedByte( cur ) == USED)
-									true
-								else
-									nextused
-							else
-								false
-
-						if (done)
-							false
-						else if (scan)
-							if (nextused) {
-								scan = false
-								true
-							} else
-								false
-						else
-							true
-					}
-
-					def next =
-						if (hasNext) {
-							scan = true
-							cur
-						} else
-							throw new NoSuchElementException( "next on empty objectIterator" )
-				}
-			case _ => sys.error( "can only use 'objectIterator' for an object" )
+			case LIST_MEMS => listElemsIterator grouped 2 map {case Seq((_, k), (_, v)) => (k, v)}
+			case _ => sys.error( "can only use 'listObjectIterator' for a list object" )
 		}
+
 
 	private def arrayElemsIterator =
 		new AbstractIterator[Long] {
@@ -955,48 +839,6 @@ abstract class IO extends IOConstants {
 					checkbytes( len )
 					skip( len )
 					pop
-				case MEMBERS =>
-					def chunk {
-						push( "object chunk" )
-						push( "next chunk pointer" )
-						val cont = checkbig
-						pop
-						push( "chunk length" )
-						val len = checkbig
-						pop
-						val start = pos
-
-						while (pos - start < len) {
-							push( "pair" )
-
-							if (checkubyte == USED) {
-								push( "key" )
-								checkvalue
-								pop
-								push( "value" )
-								checkvalue
-								pop
-							} else {
-								checkbytes( 2*vwidth )
-								skipValue
-								skipValue
-							}
-
-							pop
-						}
-
-						if (cont != NUL) {
-							checkpos( cont )
-							chunk
-						}
-
-						pop
-					}
-
-					push( "object", 1 )
-					checkbig
-					chunk
-					pop
 				case ARRAY_ELEMS|ARRAY_MEMS =>
 					push( "array", 1 )
 
@@ -1182,17 +1024,15 @@ abstract class IO extends IOConstants {
 		val cur = pos
 
 		action
-
 		pos = cur
 	}
 
-	def need( width: Int ) = {
+	def need( width: Int ) =
 		if (width > cwidth) {
 			putByte( POINTER )
 			(alloc, cwidth)
 		} else
 			(this, cwidth - width)
-	}
 
 	def todo = sys.error( "not implemented" )
 
@@ -1208,14 +1048,14 @@ abstract class IO extends IOConstants {
 			val p = getBig
 
 			getUnsignedByte( p ) match {
-				case MEMBERS =>
-					for (m <- objectIterator( p )) {
-						remove( m + 1 )
-						remove( m + 1 + vwidth )
-					}
 				case LIST_ELEMS =>
 					for ((_, e) <- listIterator( p ))
 						remove( e )
+				case LIST_MEMS =>
+					for ((k, v) <- listObjectIterator( p )) {
+						remove( k )
+						remove( v )
+					}
 				case ARRAY_ELEMS =>
 					arrayIterator( p ) foreach remove
 				case ARRAY_MEMS =>
