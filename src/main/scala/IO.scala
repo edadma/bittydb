@@ -846,7 +846,7 @@ abstract class IO extends IOConstants {
 						checkvalue
 
 					pop
-				case LIST_ELEMS =>
+				case LIST_ELEMS|LIST_MEMS =>
 					push( "list", 1 )
 
 //					val first = checkbig
