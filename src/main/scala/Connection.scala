@@ -125,7 +125,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 	
 	def iterator: Iterator[(String, Collection)] =
 		io.listObjectIterator( rootPtr ) map {
-			case (k, _) =>
+			case ((_, k), _) =>
 				val name = io.getValue( k ).asInstanceOf[String]
 
 				name -> new Collection( root, name )
@@ -143,30 +143,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 	override def toString = "connection to " + io
 	
 	class Cursor( list: Long, val chunk: Long, val elem: Long ) extends DBFilePointer( elem ) {
-		lazy val (freeptr, lenptr) =
-			io.getType( list ) match {
-				case NIL => sys.error( "can't have a cursor in an empty list" )
-				case LIST_ELEMS => (io.pos + io.pwidth, io.pos + 2*io.pwidth)
-				case t => sys.error( f"can only get a cursor for an list: $t%x, ${io.pos}%x" )
-			}
-
-		def remove = {
-			val nextptr =
-				io.getBig( chunk + 2*io.pwidth ) match {
-					case NUL =>
-						io.putBig( chunk + io.pwidth, io.getBig(freeptr) )
-						io.putBig( freeptr, chunk )
-						NUL
-					case p => p
-				}
-
-			io.putBig( chunk + 2*io.pwidth, elem )
-			io.addBig( lenptr, -1 )
-			io.addBig( chunk + 4*io.pwidth, -1 )
-			io.remove( elem )
-			io.putByte( elem, DELETED )
-			io.putBig( nextptr )
-		}
+		def remove = io.removeListElement( list, chunk, elem )
 
 		override def get =
 			if (io.peekUnsignedByte( elem ) == DELETED)
@@ -251,25 +228,24 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 	
 //		def list = io.objectIterator( addr ) map {a => io.getValue( a + 1 ) -> new DBFilePointer( io.pos )} toList	//todo: recode
 		
-		private [bittydb] def lookup( key: Any ): Option[Long] = {
-			for ((k, v) <- io.listObjectIterator( addr ))
+		private [bittydb] def lookup( key: Any ): Option[(Long, Long)] = {
+			for (((_, k), (vc, v)) <- io.listObjectIterator( addr ))
 				if (key == io.getValue( k ))
-					return Some( v )
+					return Some (vc, v)
 
 			None
 		}
 
-		// todo: this isn't correct: use code from other remove() method - needs list, chunk and element addresses: remove elements in reverse order so set() works right
 		def remove( key: Any ) =
 			lookup( key ) match {
 				case None => false
-				case Some( at ) =>
-					io.remove( at + io.vwidth )
-					io.remove( at )
+				case Some( (chunk, elem) ) =>
+					io.removeListElement( addr, chunk, elem )
+					io.removeListElement( addr, chunk, elem - io.vwidth )
 					true
 			}
 
-		def key( k: Any ): Option[DBFilePointer] = lookup( k ) map (new DBFilePointer(_))
+		def key( k: Any ): Option[DBFilePointer] = lookup( k ) map {case (_, addr) => new DBFilePointer( addr )}
 
 		def set( kv: (Any, Any) ) =
 			io.getType( addr ) match {
@@ -289,7 +265,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 							insert( kv._1 )
 							insert( kv._2 )
 							false
-						case Some( addr ) =>
+						case Some( (_, addr) ) =>
 							io.remove( addr )
 							io.putValue( addr, kv._2 )
 							io.finish

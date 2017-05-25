@@ -549,16 +549,43 @@ abstract class IO extends IOConstants {
 	}
 
 	//
+	// List operations
+	//
+
+	def removeListElement( list: Long, chunk: Long, elem: Long ) {
+		val (freeptr, lenptr) =
+			getType( list ) match {
+				case NIL => sys.error( "can't use 'removeListElement' on an empty list" )
+				case LIST_ELEMS|LIST_MEMS => (pos + pwidth, pos + 2*pwidth)
+				case t => sys.error( f"can only use 'removeListElement' for a list: $t%x, $pos%x" )
+			}
+		val nextptr =
+			getBig( chunk + 2*pwidth ) match {
+				case NUL =>
+					putBig( chunk + pwidth, getBig(freeptr) )
+					putBig( freeptr, chunk )
+					NUL
+				case p => p
+			}
+
+		putBig( chunk + 2*pwidth, elem )
+		addBig( lenptr, -1 )
+		addBig( chunk + 4*pwidth, -1 )
+		remove( elem )
+		putByte( elem, DELETED )
+		putBig( nextptr )
+	}
+
+	//
 	// Iterators
 	//
 
-	def listObjectIterator( addr: Long ): Iterator[(Long, Long)] =
+	def listObjectIterator( addr: Long ): Iterator[((Long, Long), (Long, Long))] =
 		getType( addr ) match {
 			case EMPTY => Iterator.empty
-			case LIST_MEMS => listElemsIterator grouped 2 map {case Seq((_, k), (_, v)) => (k, v)}
+			case LIST_MEMS => listElemsIterator grouped 2 map {case Seq(k, v) => (k, v)}
 			case _ => sys.error( "can only use 'listObjectIterator' for a list object" )
 		}
-
 
 	private def arrayElemsIterator =
 		new AbstractIterator[Long] {
@@ -607,10 +634,6 @@ abstract class IO extends IOConstants {
 	private def listElemsIterator = {
 		val header = pos
 		val first = header + 3*pwidth
-//			getBig match {
-//				case NUL => header + 4*pwidth
-//				case p => p
-//			}
 
 		new AbstractIterator[(Long, Long)] {
 			var cont: Long = _
@@ -1053,7 +1076,7 @@ abstract class IO extends IOConstants {
 					for ((_, e) <- listIterator( p ))
 						remove( e )
 				case LIST_MEMS =>
-					for ((k, v) <- listObjectIterator( p )) {
+					for (((_, k), (_, v)) <- listObjectIterator( p )) {
 						remove( k )
 						remove( v )
 					}
