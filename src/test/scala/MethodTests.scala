@@ -96,17 +96,16 @@ class MethodTests extends FreeSpec with PropertyChecks with Matchers
 		db.root( "a" ).elements.toList shouldBe List( 5, 3, "happy" )
 	}
 
-	//todo: recode list() method
-//	"list (objectIterator)" in
-//	{
-//	val db = Connection.mem()
-//
-//		db.root.set( "asdfasdfasdf" -> List(1, 2, 3) )
-//		db.root.set( "zxcvzxcvzxcv" -> List(4, 5, 6) )
-//		db.root.set( "qwerqwerqwer" -> List(7, 8, 9) )
-//		db.root.list map {case (k, v) => (k, v.get)} shouldBe List(
-//			"asdfasdfasdf" -> List(1, 2, 3), "zxcvzxcvzxcv" -> List(4, 5, 6), "qwerqwerqwer" -> List(7, 8, 9) )
-//	}
+	"list (objectIterator)" in
+	{
+	val db = Connection.mem()
+
+		db.root.set( "asdfasdfasdf" -> List(1, 2, 3) )
+		db.root.set( "zxcvzxcvzxcv" -> List(4, 5, 6) )
+		db.root.set( "qwerqwerqwer" -> List(7, 8, 9) )
+		db.root.list map {case (k, v) => (k, v.get)} shouldBe List(
+			"asdfasdfasdf" -> List(1, 2, 3), "zxcvzxcvzxcv" -> List(4, 5, 6), "qwerqwerqwer" -> List(7, 8, 9) )
+	}
 	
 	"update (MongoDB style)" in
 	{

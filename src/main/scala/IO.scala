@@ -580,13 +580,6 @@ abstract class IO extends IOConstants {
 	// Iterators
 	//
 
-	def listObjectIterator( addr: Long ): Iterator[((Long, Long), (Long, Long))] =
-		getType( addr ) match {
-			case EMPTY => Iterator.empty
-			case LIST_MEMS => listElemsIterator grouped 2 map {case Seq(k, v) => (k, v)}
-			case _ => sys.error( "can only use 'listObjectIterator' for a list object" )
-		}
-
 	private def arrayElemsIterator =
 		new AbstractIterator[Long] {
 			var count = getBig
@@ -693,6 +686,13 @@ abstract class IO extends IOConstants {
 			case NIL => Iterator.empty
 			case LIST_ELEMS => listElemsIterator
 			case _ => sys.error( "can only use 'listIterator' for a list" )
+		}
+
+	def listObjectIterator( addr: Long ): Iterator[((Long, Long), (Long, Long))] =
+		getType( addr ) match {
+			case EMPTY => Iterator.empty
+			case LIST_MEMS => listElemsIterator grouped 2 map {case Seq(k, v) => (k, v)}
+			case _ => sys.error( "can only use 'listObjectIterator' for a list object" )
 		}
 
 	//

@@ -226,7 +226,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 			io.finish
 		}
 	
-//		def list = io.objectIterator( addr ) map {a => io.getValue( a + 1 ) -> new DBFilePointer( io.pos )} toList	//todo: recode
+		def list = io.listObjectIterator( addr ) map {case ((_, k), _) => io.getValue( k ) -> new DBFilePointer( io.pos )} toList
 		
 		private [bittydb] def lookup( key: Any ): Option[(Long, Long)] = {
 			for (((_, k), (vc, v)) <- io.listObjectIterator( addr ))
@@ -261,9 +261,7 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 				case LIST_MEMS =>
 					lookup( kv._1 ) match {
 						case None =>
-							// todo: care needs to be taken in case reclaimed storage is available which gets unfreed in reverse order
-							insert( kv._1 )
-							insert( kv._2 )
+							insert( kv._1, kv._2 )
 							false
 						case Some( (_, addr) ) =>
 							io.remove( addr )
@@ -274,31 +272,42 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 				case _ => sys.error( "can only use 'set' for an object" )
 			}
 
-		def insert( elem: Any ): Unit = {
+		def insert( elems: Any* ) = insertSeq( elems.toList )
+
+		def insertSeq( s: LinearSeq[Any] ): Unit = {
 			io.getType( addr ) match {
-				case NIL => append( elem )
+				case NIL => appendSeq( s )
 				case LIST_ELEMS|LIST_MEMS =>
 					io.skipBig	// skip last chunk pointer
 
 					val freeptr = io.pos
 
-					io.getBig match {
-						case NUL => append( elem )
-						case chunk =>
-							val countptr = io.pos
-							val slot = io.getBig( chunk + 2*io.pwidth )
-							val nextfree = io.getBig( slot + 1 )
+					def insertList( l: LinearSeq[Any] ): Unit = {
+						if (l nonEmpty) {
+							io.pos = freeptr
 
-							io.putBig( chunk + 2*io.pwidth, nextfree )
+							io.getBig match {
+								case NUL => appendSeq( l )
+								case chunk =>
+									val countptr = io.pos
+									val slot = io.getBig( chunk + 2 * io.pwidth )
+									val nextfree = io.getBig( slot + 1 )
 
-							if (nextfree == NUL)
-								io.putBig( freeptr, io.getBig(chunk + io.pwidth) )
+									io.putBig( chunk + 2 * io.pwidth, nextfree )
 
-							io.putValue( slot, elem )
-							io.finish
-							io.addBig( chunk + 4*io.pwidth, 1 )
-							io.addBig( countptr, 1 )
+									if (nextfree == NUL)
+										io.putBig( freeptr, io.getBig( chunk + io.pwidth ) )
+
+									io.putValue( slot, l.head )
+									io.finish
+									io.addBig( chunk + 4 * io.pwidth, 1 )
+									io.addBig( countptr, 1 )
+									insertList( l.tail )
+							}
+						}
 					}
+
+					insertList( s )
 				case _ => sys.error( "can only use 'insert' for a list" )
 			}
 		}

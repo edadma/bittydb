@@ -10,14 +10,13 @@ object Main extends App {
 
 	println( db.root.set( "a" -> List(0x11, 0x22, 0x33) ) )
 	println( db.root.get )
-
 	println( db.root.set( "b" -> 0x44 ) )
 	println( db.root.set( "c" -> 0x55 ) )
 	println( db.root.get )
 	println( db.root.lookup( "b" ) map {case (k, v) => (k.toHexString, v.toHexString)} )
 	db.io.dump
-//	println( db.root.remove( "b" ) )
-//	println( db.root.get )
+	println( db.root.remove( "b" ) )
+	println( db.root.get )
 
 //	val coll = db( "D" )
 //
