@@ -608,20 +608,8 @@ abstract class IO extends IOConstants {
 	def arrayObjectIterator( addr: Long ) =
 		getType( addr ) match {
 			case NIL => Iterator.empty
-			case ARRAY_MEMS =>
-				new Iterator[Long] {
-					val it = arrayElemsIterator
-
-					def hasNext = it.hasNext
-
-					def next = {
-						val res = it.next
-
-						it.next // discard every second value
-						res
-					}
-				}
-			case _ => sys.error( "can only use 'arrayObjectIterator' for an object (stored as an array)" )
+			case ARRAY_MEMS => arrayElemsIterator grouped 2 map {case Seq(k, v) => (k, v)}
+			case _ => sys.error( "can only use 'arrayObjectIterator' for an array object" )
 		}
 
 	private def listElemsIterator = {
@@ -1083,9 +1071,9 @@ abstract class IO extends IOConstants {
 				case ARRAY_ELEMS =>
 					arrayIterator( p ) foreach remove
 				case ARRAY_MEMS =>
-					for (m <- arrayObjectIterator( p )) {
-						remove( m )
-						remove( m + vwidth )
+					for ((k, v) <- arrayObjectIterator( p )) {
+						remove( k )
+						remove( v )
 					}
 				case _ =>
 			}

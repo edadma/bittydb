@@ -228,13 +228,21 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 	
 		def list = io.listObjectIterator( addr ) map {case ((_, k), _) => io.getValue( k ) -> new DBFilePointer( io.pos )} toList
 		
-		private [bittydb] def lookup( key: Any ): Option[(Long, Long)] = {
-			for (((_, k), (vc, v)) <- io.listObjectIterator( addr ))
-				if (key == io.getValue( k ))
-					return Some (vc, v)
+		private [bittydb] def lookup( key: Any ): Option[(Long, Long)] =
+			io.getType( addr ) match {
+				case EMPTY|LIST_MEMS =>
+					for (((_, k), (vc, v)) <- io.listObjectIterator( addr ))
+						if (key == io.getValue( k ))
+							return Some (vc, v)
 
-			None
-		}
+					None
+				case ARRAY_MEMS =>
+					for ((k, v) <- io.arrayObjectIterator( addr ))
+						if (key == io.getValue( k ))
+							return Some (0, v)
+
+					None
+			}
 
 		def remove( key: Any ) =
 			lookup( key ) match {
