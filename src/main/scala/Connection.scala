@@ -205,26 +205,14 @@ class Connection( private [bittydb] val io: IO, options: Seq[(Symbol, Any)] ) ex
 		
 		def nin( s: Set[Any] ) = !s( get )
 
-		// todo: this looks wrong: "io.remove( addr )" won't work right: discard this method maybe
-		def put( v: Any ) {
-			v match {
-				case m: CMap[_, _] if addr == rootPtr && m.isEmpty =>
-					io.size = rootPtr
-					io.pos = io.size
-					io putValue Map.empty
-				case m: CMap[_, _] if addr == rootPtr =>
-					io.size = rootPtr
-					io.pos = io.size
-					io.putByte( addr, LIST_MEMS )
-					io.putListObject( m )
-				case _ if addr == rootPtr => sys.error( "can only 'put' an object at root" )
-				case _ =>
-					io.remove( addr )
-					io.putValue( addr, v )
+		def put( v: Any ) =
+			if (addr == rootPtr)
+				sys.error( "cannot use 'put' at root" )
+			else {
+				io.remove( addr )
+				io.putValue( addr, v )
+				io.finish
 			}
-			
-			io.finish
-		}
 	
 		def list = io.listObjectIterator( addr ) map {case ((_, k), _) => io.getValue( k ) -> new DBFilePointer( io.pos )} toList
 		
