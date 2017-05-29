@@ -319,7 +319,7 @@ abstract class IO extends IOConstants {
 
 	def putSimple( t: Int ) = {
 		putByte( t )
-		pad( cwidth )
+		padCell
 	}
 
 	def putValue( v: Any ) {
@@ -328,7 +328,7 @@ abstract class IO extends IOConstants {
 			case "" => putSimple( NSTRING )
 			case b: Boolean =>
 				putBoolean( b )
-				pad( cwidth )
+				padCell
 			case a: Int if a.isValidByte =>
 				putByte( BYTE )
 				putByte( a )
@@ -422,7 +422,7 @@ abstract class IO extends IOConstants {
 
 				pad( p )
 			case a: collection.Map[_, _] if a isEmpty => putSimple( EMPTY )
-			case a: collection.Map[_, _] => putAlloc( LIST_MEMS ).putListObject( a )//putAlloc( ARRAY_MEMS ).putArrayObject( a )
+			case a: collection.Map[_, _] => putAlloc( ARRAY_MEMS ).putArrayObject( a )//putAlloc( LIST_MEMS ).putListObject( a )
 			case a: collection.IndexedSeq[_] if a isEmpty => putSimple( EMPTY_ARRAY )
 			case a: collection.IndexedSeq[_] => putAlloc( ARRAY_ELEMS ).putArray( a )
 			case a: collection.TraversableOnce[_] if a isEmpty => putSimple( NIL )
@@ -591,7 +591,7 @@ abstract class IO extends IOConstants {
 				if (hasNext) {
 					val res = cur
 
-					cur += cwidth
+					cur += vwidth
 					count -= 1
 					res
 				} else
@@ -830,7 +830,7 @@ abstract class IO extends IOConstants {
 				case Type1( SSTRING, l ) =>
 					push( "small string", 1 )
 					checkif( 0 <= l && l <= 0xF, s"small string length out of range: $l", 1 )
-					skip( cwidth )
+					skipCell
 					pop
 				case Type2( STRING, encoding, width ) =>
 					push( "string" )

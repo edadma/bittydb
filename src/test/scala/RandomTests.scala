@@ -33,9 +33,9 @@ class RandomTests extends FreeSpec with PropertyChecks with Matchers with TableD
 	val widths =
 		Table(
 			("pwidth", "cwidth", "insertions", "max length"),
-			(1, 1, 3, 8),
-			(1, 2, 3, 8),
-			(1, 3, 2, 8),
+			(1, 1, 3, 10),
+			(1, 2, 3, 10),
+			(1, 3, 3, 10),
 			(2, 2, 200, 64),
 			(2, 3, 200, 128),
 			(2, 4, 200, 128),
