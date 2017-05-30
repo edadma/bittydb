@@ -43,7 +43,4 @@ trait IOConstants {
 	val DATETIME_WIDTH = 16
 
 	val NUL = 0					// null pointer value
-
-	val USED = 0xFF
-	val UNUSED = 0xEE
 }

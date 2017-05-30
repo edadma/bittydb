@@ -25,9 +25,7 @@ abstract class IO extends IOConstants {
 
 	private [bittydb] lazy val maxsize = 1L << pwidth*8
 	private [bittydb] lazy val vwidth = 1 + cwidth						// value width
-	private [bittydb] lazy val twidth = 1 + 2*vwidth 					// pair width
-//	private [bittydb] lazy val ewidth = 1 + vwidth						// element width
-	private [bittydb] lazy val minblocksize = bitCeiling( vwidth + 1 ).toInt		// smallest allocation block needed
+	private [bittydb] lazy val minblocksize = bitCeiling( cwidth + 1 ).toInt		// smallest allocation block needed
 	private [bittydb] lazy val sizeShift = Integer.numberOfTrailingZeros( minblocksize )
 	private [bittydb] lazy val bucketLen = pwidth*8 - sizeShift
 
@@ -478,7 +476,7 @@ abstract class IO extends IOConstants {
 
 	def getListObject = listElemsIterator grouped 2 map {case Seq((_, k), (_, v)) => (getValue( k ), getValue( v ))} toMap
 
-	def putListObject( m: collection.Map[_, _] ): Unit = putList( m.iterator.flatMap(p => p.productIterator) )
+	def putListObject( m: collection.Map[_, _] ): Unit = putList( m.iterator.flatMap(_.productIterator) )
 
 	def putListObject( addr: Long, m: collection.Map[_, _] ) {
 		pos = addr
