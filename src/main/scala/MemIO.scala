@@ -22,9 +22,9 @@ class MemIO extends IO
 				}
 		}
 
-	def close {}
+	def close = {}
 
-	def force {}
+	def force = {}
 
 	def readLock( addr: Long ) = lock( addr ).readLock.lock
 
@@ -40,7 +40,7 @@ class MemIO extends IO
 	
 	def pos: Long = buf.buffer.position
 	
-	def pos_=( p: Long ) {
+	def pos_=( p: Long ): Unit = {
 		assert( p <= size, "file pointer must be less than or equal to file size" )
 		buf.buffer.position( p.asInstanceOf[Int] )
 	}
@@ -55,7 +55,7 @@ class MemIO extends IO
 		buf.buffer.get
 	}
 	
-	def putByte( b: Int ) {
+	def putByte( b: Int ): Unit = {
 		buf.putting( 1 )
 		buf.buffer.put( b.asInstanceOf[Byte] )
 	}
@@ -81,7 +81,7 @@ class MemIO extends IO
 		buf.buffer.getChar
 	}
 	
-	def putChar( c: Char ) {
+	def putChar( c: Char ): Unit = {
 		buf.putting( 2 )
 		buf.buffer.putChar( c )
 	}
@@ -91,7 +91,7 @@ class MemIO extends IO
 		buf.buffer.getShort
 	}
 	
-	def putShort( s: Int ) {
+	def putShort( s: Int ): Unit = {
 		buf.putting( 2 )
 		buf.buffer.putShort( s.asInstanceOf[Short] )
 	}
@@ -103,7 +103,7 @@ class MemIO extends IO
 		buf.buffer.getInt
 	}
 	
-	def putInt( i: Int ) {
+	def putInt( i: Int ): Unit = {
 		buf.putting( 4 )
 		buf.buffer.putInt( i )
 	}
@@ -113,7 +113,7 @@ class MemIO extends IO
 		buf.buffer.getLong
 	}
 	
-	def putLong( l: Long ) {
+	def putLong( l: Long ): Unit = {
 		buf.putting( 8 )
 		buf.buffer.putLong( l )
 	}
@@ -123,14 +123,14 @@ class MemIO extends IO
 		buf.buffer.getDouble
 	}
 	
-	def putDouble( d: Double ) {
+	def putDouble( d: Double ): Unit = {
 		buf.putting( 8 )
 		buf.buffer.putDouble( d )
 	}
 
 	def writeByteChars( s: String ) = s foreach {c => putByte( c.asInstanceOf[Int] )}
 	
-	def writeBuffer( io: MemIO ) {
+	def writeBuffer( io: MemIO ): Unit = {
 		if (io.size > Int.MaxValue)
 			sys.error( "too big" )
 

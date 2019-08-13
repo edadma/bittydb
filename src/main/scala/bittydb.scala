@@ -11,7 +11,7 @@ package object bittydb {
 	
 	val logging = true
 	
-	def log( o: AnyRef ) {
+	def log( o: AnyRef ): Unit = {
 		if (logging)
 			println( "[log]  " + o.toString )
 	}

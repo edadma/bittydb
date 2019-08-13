@@ -1,14 +1,10 @@
 name := "bittydb"
 
-version := "0.7"
+version := "0.8"
 
-scalaVersion := "2.12.2"
-
-crossScalaVersions := Seq( "2.11.11" )
+scalaVersion := "2.13.0"
 
 scalacOptions ++= Seq( "-deprecation", "-feature", "-language:postfixOps", "-language:implicitConversions", "-language:existentials" )
-
-incOptions := incOptions.value.withNameHashing( true )
 
 organization := "xyz.hyperreal"
 
@@ -19,8 +15,8 @@ resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/release
 resolvers += "Hyperreal Repository" at "https://dl.bintray.com/edadma/maven"
 
 libraryDependencies ++= Seq(
-	"org.scalatest" %% "scalatest" % "3.0.0" % "test",
-	"org.scalacheck" %% "scalacheck" % "1.13.4" % "test"
+	"org.scalatest" %% "scalatest" % "3.0.8" % "test",
+	"org.scalacheck" %% "scalacheck" % "1.14.0" % "test"
 )
 
 libraryDependencies ++= Seq(
@@ -29,23 +25,8 @@ libraryDependencies ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-	"xyz.hyperreal" %% "lia" % "0.20"
+	"xyz.hyperreal" %% "lia" % "0.23"
 )
-
-libraryDependencies ++= {
-	val akkaV = "2.4.12"
-	val sprayV = "1.3.4"
-	Seq(
-//		"io.spray"          %% "spray-can"     % sprayV,
-//		"io.spray"          %% "spray-routing" % sprayV,
-//		"io.spray"          %% "spray-json"    % "1.3.2",
-//		"io.spray"          %% "spray-testkit" % sprayV   % "test",
-//		"com.typesafe.akka" %% "akka-actor"    % akkaV
-//		"com.typesafe.akka" %% "akka-remote"   % akkaV,
-//		"com.typesafe.akka" %% "akka-testkit"  % akkaV    % "test",
-//		"org.specs2"        %% "specs2-core"   % "2.3.11" % "test"
-	)
-}
 
 mainClass in (Compile, run) := Some( "xyz.hyperreal." + name.value.replace('-', '_') + ".Main" )
 
@@ -59,7 +40,7 @@ publishArtifact in Test := false
 
 pomIncludeRepository := { _ => false }
 
-licenses := Seq("MIT" -> url("http://opensource.org/licenses/MIT"))
+licenses := Seq("ISC" -> url("https://opensource.org/licenses/ISC"))
 
 homepage := Some(url("https://github.com/edadma/" + name.value))
 
