@@ -1,9 +1,1 @@
-addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.14.10")
-
-addSbtPlugin("io.spray" % "sbt-revolver" % "0.9.1")
-
-addSbtPlugin("org.foundweekends" % "sbt-bintray" % "0.5.4")
-
-addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.6.0")
-
-addSbtPlugin("org.scoverage" % "sbt-coveralls" % "1.2.7")
+addSbtPlugin("com.codecommit" % "sbt-github-packages" % "0.5.2")
