@@ -2,10 +2,10 @@ package io.github.edadma.bittydb
 
 import java.util.UUID._
 import java.time.Instant
-
 import collection.mutable.ListBuffer
+import io.github.edadma.dal.PrecisionDAL
 
-import xyz.hyperreal.lia.Math
+import scala.language.postfixOps
 
 object Collection {
   val QUERY_PREDICATES = Set("$eq", "$lt", "$gt", "$lte", "$gte", "$ne", "$in", "$nin")
@@ -57,12 +57,16 @@ class Collection(parent: Connection#Pointer, name: String) extends IOConstants {
         query forall {
           case (k, op: Map[String, Any]) if op.keysIterator forall (QUERY_PREDICATES contains) =>
             op.head match {
-              case ("$eq", v)            => d get k contains v
-              case ("$ne", v)            => d get k exists (_ != v)
-              case ("$lt", v)            => d get k exists (Math.predicate('<, _, v))
-              case ("$lte", v)           => d get k exists (Math.predicate('<=, _, v))
-              case ("$gt", v)            => d get k exists (Math.predicate('>, _, v))
-              case ("$gte", v)           => d get k exists (Math.predicate('>=, _, v))
+              case ("$eq", v) => d get k contains v
+              case ("$ne", v) => d get k exists (_ != v)
+              case ("$lt", v) =>
+                d get k exists (n => PrecisionDAL.relate(Symbol("<"), n.asInstanceOf[Number], v.asInstanceOf[Number]))
+              case ("$lte", v) =>
+                d get k exists (n => PrecisionDAL.relate(Symbol("<="), n.asInstanceOf[Number], v.asInstanceOf[Number]))
+              case ("$gt", v) =>
+                d get k exists (n => PrecisionDAL.relate(Symbol(">"), n.asInstanceOf[Number], v.asInstanceOf[Number]))
+              case ("$gte", v) =>
+                d get k exists (n => PrecisionDAL.relate(Symbol(">="), n.asInstanceOf[Number], v.asInstanceOf[Number]))
               case ("$in", v: Seq[Any])  => d get k exists (v contains)
               case ("$nin", v: Seq[Any]) => d get k exists (!v.contains(_))
             }
@@ -93,7 +97,7 @@ class Collection(parent: Connection#Pointer, name: String) extends IOConstants {
       var count = 0
 
       for (v <- cursor) {
-        v.remove
+        v.remove()
         count += 1
       }
 
@@ -105,7 +109,7 @@ class Collection(parent: Connection#Pointer, name: String) extends IOConstants {
 
   def remove(query: Connection#Cursor => Boolean): Int = remove(filter(query))
 
-  def update(cursor: Iterator[Connection#Cursor], updates: Seq[UpdateOperator]): Int =
+  def update(cursor: Iterator[Connection#Cursor], updates: collection.Seq[UpdateOperator]): Int =
     if (check) {
       var count = 0
 

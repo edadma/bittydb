@@ -1,4 +1,4 @@
-package xyz.hyperreal.bittydb
+package io.github.edadma.bittydb
 
 import org.scalatest.Tag
 

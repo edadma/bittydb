@@ -3,11 +3,11 @@ package io.github.edadma.bittydb
 import java.io.File
 import java.nio.charset.Charset
 import util.Either
-import collection.{TraversableOnce, mutable, Map => CMap}
-import collection.mutable.AbstractMap
-import xyz.hyperreal.lia.Math
-
+import collection.{mutable, Map => CMap}
 import scala.annotation.tailrec
+import io.github.edadma.dal.PrecisionDAL
+
+import scala.language.postfixOps
 
 object Connection {
   private def invalid = {
@@ -114,7 +114,7 @@ class Connection(private[bittydb] val io: IO, options: Seq[(Symbol, Any)])
 
 //	def apply( name: String ) = new Collection( root, name )
 
-  def close(): Unit = io.close
+  def close(): Unit = io.close()
 
   def length: Long = io.size
 
@@ -131,12 +131,12 @@ class Connection(private[bittydb] val io: IO, options: Seq[(Symbol, Any)])
       name -> new Collection(root, name)
     }
 
-//  def +=(kv: (String, Collection)) = sys.error("use 'set'")
+  override def addOne(elem: (String, Collection)): Connection.this.type = sys.error("use 'set'")
 
-//  def -=(key: String) = {
-//    remove(key)
-//    this
-//  }
+  override def subtractOne(elem: String): Connection.this.type = {
+    remove(elem)
+    this
+  }
 
   override def default(name: String) = new Collection(root, name)
 
@@ -204,13 +204,13 @@ class Connection(private[bittydb] val io: IO, options: Seq[(Symbol, Any)])
 
     def =!=(a: Any): Boolean = get != a
 
-    def <(a: Any): Boolean = Math.predicate('<, get, a)
+    def <(a: Any): Boolean = PrecisionDAL.relate(Symbol("<"), get.asInstanceOf[Number], a.asInstanceOf[Number])
 
-    def >(a: Any): Boolean = Math.predicate('>, get, a)
+    def >(a: Any): Boolean = PrecisionDAL.relate(Symbol(">"), get.asInstanceOf[Number], a.asInstanceOf[Number])
 
-    def <=(a: Any): Boolean = Math.predicate('<=, get, a)
+    def <=(a: Any): Boolean = PrecisionDAL.relate(Symbol("<="), get.asInstanceOf[Number], a.asInstanceOf[Number])
 
-    def >=(a: Any): Boolean = Math.predicate('>=, get, a)
+    def >=(a: Any): Boolean = PrecisionDAL.relate(Symbol(">="), get.asInstanceOf[Number], a.asInstanceOf[Number])
 
     def in(s: Set[Any]): Boolean = s(get)
 
@@ -233,7 +233,7 @@ class Connection(private[bittydb] val io: IO, options: Seq[(Symbol, Any)])
           io.putValue(addr, v)
       }
 
-      io.finish
+      io.finish()
     }
 
     def list: Seq[(Any, DBFilePointer)] =
@@ -364,15 +364,15 @@ class Connection(private[bittydb] val io: IO, options: Seq[(Symbol, Any)])
               cont.putObjectChunk(Map(kv))
 //							}
 
-              io.finish
+              io.finish()
               false
             case Left(Some(insertion)) =>
               io.putPair(insertion, kv)
-              io.finish
+              io.finish()
               false
             case Right(_) =>
               io.putValue(kv._2)
-              io.finish
+              io.finish()
               true
           }
         case _ => sys.error("can only use 'set' for an object")
@@ -386,7 +386,7 @@ class Connection(private[bittydb] val io: IO, options: Seq[(Symbol, Any)])
         case ELEMENTS =>
           val header = io.pos
 
-          io.skipBig
+          io.skipBig()
 
 // 					if (ending) {
 // 						io.skipBig
@@ -423,7 +423,7 @@ class Connection(private[bittydb] val io: IO, options: Seq[(Symbol, Any)])
         case _ => sys.error("can only use 'append' for an array")
       }
 
-      io.finish
+      io.finish()
     }
 
     def prepend(elems: Any*): Unit = prependSeq(elems)
@@ -434,7 +434,7 @@ class Connection(private[bittydb] val io: IO, options: Seq[(Symbol, Any)])
         case ELEMENTS =>
           val header = io.pos
 
-          io.skipBig
+          io.skipBig()
 
           val first = io.getBig match {
             case NUL => header + 3 * io.pwidth
@@ -452,7 +452,7 @@ class Connection(private[bittydb] val io: IO, options: Seq[(Symbol, Any)])
         case _ => sys.error("can only use 'prepend' for an array")
       }
 
-      io.finish
+      io.finish()
     }
 
     def length: Long =
@@ -466,9 +466,9 @@ class Connection(private[bittydb] val io: IO, options: Seq[(Symbol, Any)])
 
     def elementsAs[A]: Iterator[A] = elements.asInstanceOf[Iterator[A]]
 
-    def elements: Iterator[Any] = cursor map (_ get)
+    def elements: Iterator[Any] = cursor map (_.get)
 
-    def at(index: Int) = new Cursor(io arrayIterator addr drop index next, addr)
+    def at(index: Int) = new Cursor((io arrayIterator addr drop index).next(), addr)
 
     def kind: Int = io getType addr
 

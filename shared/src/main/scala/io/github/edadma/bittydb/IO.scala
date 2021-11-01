@@ -4,9 +4,9 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
 import java.time.{Instant, OffsetDateTime, ZoneOffset}
 import java.util.UUID
-
 import collection.AbstractIterator
 import collection.mutable.{ArrayBuffer, ArrayStack, ListBuffer}
+import scala.annotation.tailrec
 
 object IO {
   private[bittydb] val pwidth_default = 5
@@ -419,7 +419,7 @@ abstract class IO extends IOConstants {
     getValue
   }
 
-  def putValue(addr: Long, v: Any) {
+  def putValue(addr: Long, v: Any): Unit = {
     pos = addr
     putValue(v)
   }
@@ -427,7 +427,8 @@ abstract class IO extends IOConstants {
   def getObject = {
     var map = Map.empty[Any, Any]
 
-    def chunk {
+    @tailrec
+    def chunk: Unit = {
       val cont = getBig
       val len = getBig
       val start = pos
@@ -475,18 +476,18 @@ abstract class IO extends IOConstants {
     putBig(start, pos - start - pwidth)
   }
 
-  def putPair(kv: (Any, Any)) {
+  def putPair(kv: (Any, Any)): Unit = {
     putByte(USED)
     putValue(kv._1)
     putValue(kv._2)
   }
 
-  def putPair(addr: Long, kv: (Any, Any)) {
+  def putPair(addr: Long, kv: (Any, Any)): Unit = {
     pos = addr
     putPair(kv)
   }
 
-  def putElement(v: Any) {
+  def putElement(v: Any): Unit = {
     putByte(USED)
     putValue(v)
   }
@@ -512,10 +513,10 @@ abstract class IO extends IOConstants {
       }
     }
 
-    skipBig // skip count
+    skipBig() // skip count
 
     getBig match { // set pos to first chunk
-      case NUL => skipBig // skip last chuck pointer
+      case NUL => skipBig() // skip last chuck pointer
       case f   => pos = f
     }
 
@@ -523,22 +524,22 @@ abstract class IO extends IOConstants {
     buf.toList
   }
 
-  def putArray(s: collection.TraversableOnce[Any]) {
+  def putArray(s: collection.IterableOnce[Any]): Unit = {
     val cur = pos
 
-    padBig // length
-    padBig // first chunk pointer
-    padBig // last chunk pointer
+    padBig() // length
+    padBig() // first chunk pointer
+    padBig() // last chunk pointer
     putArrayChunk(s, this, cur)
   }
 
-  def putArrayChunk(s: collection.TraversableOnce[Any], lengthio: IO, lengthptr: Long, contptr: Long = NUL) {
+  def putArrayChunk(s: collection.IterableOnce[Any], lengthio: IO, lengthptr: Long, contptr: Long = NUL) {
     putBig(contptr) // continuation pointer
 
     val start = pos
     var count = 0L
 
-    padBig // length of chunk in bytes
+    padBig() // length of chunk in bytes
 
     for (e <- s) {
       putByte(USED)
@@ -613,7 +614,7 @@ abstract class IO extends IOConstants {
               true
           }
 
-          def next =
+          def next(): Long =
             if (hasNext) {
               scan = true
               cur
@@ -645,13 +646,14 @@ abstract class IO extends IOConstants {
           chunk(first)
           nextused
 
-          private def chunk(p: Long) {
+          private def chunk(p: Long): Unit = {
             cont = getBig(p)
             chunksize = getBig
             cur = pos
           }
 
-          private def nextused {
+          @tailrec
+          private def nextused: Unit = {
             if (chunksize == 0)
               if (cont == NUL)
                 done = true
@@ -668,9 +670,9 @@ abstract class IO extends IOConstants {
             }
           }
 
-          def hasNext = !done
+          def hasNext: Boolean = !done
 
-          def next =
+          def next(): Long =
             if (done)
               throw new NoSuchElementException("next on empty arrayIterator")
             else {
@@ -747,13 +749,13 @@ abstract class IO extends IOConstants {
     def push(item: String, adjust: Int = 0): Unit =
       stack push f"${pos - adjust}%16x: $item"
 
-    def pop = stack.pop
+    def pop = stack.pop()
 
-    def checkif(c: Boolean, msg: String, adjust: Int = 0) =
+    def checkif(c: Boolean, msg: String, adjust: Int = 0): Unit =
       if (!c)
         problem(msg, adjust)
 
-    def checkbytes(n: Int) = checkif(remaining >= n, f"${n - remaining}%x past end")
+    def checkbytes(n: Int): Unit = checkif(remaining >= n, f"${n - remaining}%x past end")
 
     def checkubyte = {
       checkbytes(1)
@@ -894,7 +896,7 @@ abstract class IO extends IOConstants {
           chunk
           pop
         case ELEMENTS =>
-          def chunk {
+          def chunk: Unit = {
             push("array chunk")
 
             push("next chunk pointer")
@@ -942,7 +944,7 @@ abstract class IO extends IOConstants {
       }
     }
 
-    def checkbucket(block: Long, bucket: Int) {
+    def checkbucket(block: Long, bucket: Int): Unit = {
       if (block != NUL) {
         push(s"bucket $bucket", pwidth)
         checkpos(block - 1)
@@ -1002,31 +1004,31 @@ abstract class IO extends IOConstants {
 
   def skipByte = pos += 1
 
-  def skipByte(addr: Long) {
+  def skipByte(addr: Long): Unit = {
     pos = addr
     skipByte
   }
 
-  def skipType(addr: Long) {
+  def skipType(addr: Long): Unit = {
     if (getUnsignedByte(addr) == POINTER)
       skipByte(getBig)
   }
 
-  def skipBig = skip(pwidth)
+  def skipBig() = skip(pwidth)
 
-  def skipInt = skip(4)
+  def skipInt() = skip(4)
 
-  def skipLong = skip(8)
+  def skipLong() = skip(8)
 
-  def skipDouble = skip(8)
+  def skipDouble() = skip(8)
 
-  def skipValue = skip(vwidth)
+  def skipValue() = skip(vwidth)
 
-  def pad(n: Long) =
+  def pad(n: Long): Unit =
     for (_ <- 1L to n)
       putByte(0)
 
-  def padBig = pad(pwidth)
+  def padBig() = pad(pwidth)
 
   def padCell = pad(cwidth)
 
@@ -1080,7 +1082,7 @@ abstract class IO extends IOConstants {
 
   def bucketPtr(bucketIndex: Int) = bucketIndex * pwidth + bucketsPtr
 
-  def dealloc(p: Long) {
+  def dealloc(p: Long): Unit = {
     val ind = getByte(p - 1)
 
     putBig(p, buckets(ind))
@@ -1088,7 +1090,7 @@ abstract class IO extends IOConstants {
     putBig(bucketPtr(ind), p)
   }
 
-  def alloc = {
+  def alloc: AllocIO = {
     val res = new AllocIO(this)
 
     allocs += res
@@ -1123,12 +1125,12 @@ abstract class IO extends IOConstants {
 
   private[bittydb] def writeAllocBackpatches {
     for (a <- allocs) {
-      a.writeBackpatches
+      a.writeBackpatches()
       a.writeAllocBackpatches
     }
   }
 
-  private[bittydb] def writeAllocs(dest: IO) {
+  private[bittydb] def writeAllocs(dest: IO): Unit = {
     for (a <- allocs) {
       dest.pos = a.base - 1
       dest.putByte(a.bucket)
@@ -1138,16 +1140,16 @@ abstract class IO extends IOConstants {
     }
   }
 
-  def finish {
+  def finish(): Unit = {
     if (allocs.nonEmpty) {
       append
       appendbase = pos
       placeAllocs(this)
       writeAllocBackpatches
       writeAllocs(this)
-      allocs.clear
+      allocs.clear()
     }
 
-    force
+    force()
   }
 }
