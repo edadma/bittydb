@@ -1,4 +1,4 @@
-package xyz.hyperreal.bittydb
+package io.github.edadma.bittydb
 
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8

@@ -1,4 +1,4 @@
-package xyz.hyperreal.bittydb
+package io.github.edadma.bittydb
 
 trait IOConstants {
   val NULL = 0x00 // JVM null

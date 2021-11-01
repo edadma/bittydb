@@ -1,4 +1,4 @@
-package xyz.hyperreal.bittydb
+package io.github.edadma.bittydb
 
 import java.util.UUID._
 import java.time.Instant

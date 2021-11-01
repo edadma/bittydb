@@ -1,4 +1,4 @@
-package xyz.hyperreal
+package io.github.edadma
 
 //import org.slf4j.LoggerFactory
 import java.time.{Instant, OffsetDateTime}
