@@ -59,17 +59,17 @@ abstract class IO extends IOConstants {
 
   def getByte: Int
 
-  def putByte(b: Int): Unit
+  infix def putByte(b: Int): Unit
 
   def getBytes(len: Int): Array[Byte]
 
-  def putBytes(a: Array[Byte]): Unit
+  infix def putBytes(a: Array[Byte]): Unit
 
   def getUnsignedByte: Int
 
   def getChar: Char
 
-  def putChar(c: Char): Unit
+  infix def putChar(c: Char): Unit
 
   def getShort: Int
 
@@ -83,7 +83,7 @@ abstract class IO extends IOConstants {
 
   def getLong: Long
 
-  def putLong(l: Long)
+  def putLong(l: Long): Unit
 
   def getDouble: Double
 
@@ -116,7 +116,7 @@ abstract class IO extends IOConstants {
     res
   }
 
-  def putBig(l: Long) {
+  def putBig(l: Long): Unit = {
     if (l > maxsize)
       sys.error("pointer value too large")
 
@@ -129,12 +129,12 @@ abstract class IO extends IOConstants {
     getBig
   }
 
-  def putBig(addr: Long, l: Long) {
+  def putBig(addr: Long, l: Long): Unit = {
     pos = addr
     putBig(l)
   }
 
-  def addBig(a: Long) {
+  def addBig(a: Long): Unit = {
     val cur = pos
     val v = getBig
 
@@ -142,7 +142,7 @@ abstract class IO extends IOConstants {
     putBig(v + a)
   }
 
-  def addBig(addr: Long, a: Long) {
+  def addBig(addr: Long, a: Long): Unit = {
     pos = addr
     addBig(a)
   }
@@ -157,7 +157,7 @@ abstract class IO extends IOConstants {
     getByte
   }
 
-  def putByte(addr: Long, b: Int) {
+  def putByte(addr: Long, b: Int): Unit = {
     pos = addr
     putByte(b)
   }
@@ -183,7 +183,7 @@ abstract class IO extends IOConstants {
       None
   }
 
-  def putByteString(s: String) {
+  infix def putByteString(s: String): Unit = {
     putByte(s.length.asInstanceOf[Byte])
     writeByteChars(s)
   }
@@ -221,7 +221,7 @@ abstract class IO extends IOConstants {
 
   def getUUID = new UUID(getLong, getLong)
 
-  def putUUID(id: UUID) {
+  def putUUID(id: UUID): Unit = {
     putLong(id.getMostSignificantBits)
     putLong(id.getLeastSignificantBits)
   }
@@ -235,7 +235,7 @@ abstract class IO extends IOConstants {
 
   private def bool2int(a: Boolean) = if (a) TRUE else FALSE
 
-  def putBoolean(a: Boolean) = putByte(bool2int(a))
+  infix def putBoolean(a: Boolean) = putByte(bool2int(a))
 
   object Type1 {
     def unapply(t: Int): Option[(Int, Int)] = {
@@ -288,7 +288,7 @@ abstract class IO extends IOConstants {
     res
   }
 
-  def putValue(v: Any) {
+  def putValue(v: Any): Unit = {
     v match {
       case null =>
         putByte(NULL)
@@ -400,10 +400,10 @@ abstract class IO extends IOConstants {
 
         io.putByte(MEMBERS)
         io.putObject(a)
-      case a: collection.TraversableOnce[_] if a isEmpty =>
+      case a: collection.IterableOnce[_] if a.isEmpty =>
         putByte(NIL)
         pad(cwidth)
-      case a: collection.TraversableOnce[_] =>
+      case a: collection.IterableOnce[_] =>
         putByte(POINTER)
 
         val io = allocPad
@@ -437,8 +437,8 @@ abstract class IO extends IOConstants {
         if (getUnsignedByte == USED)
           map += getValue -> getValue
         else {
-          skipValue
-          skipValue
+          skipValue()
+          skipValue()
         }
       }
 
@@ -448,27 +448,27 @@ abstract class IO extends IOConstants {
       }
     }
 
-    skipBig // skip last chunk pointer
+    skipBig() // skip last chunk pointer
     chunk
     map
   }
 
-  def putObject(m: collection.Map[_, _]) {
-    padBig //putBig( pos + pwidth )	// last chunk pointer
+  def putObject(m: collection.Map[_, _]): Unit = {
+    padBig() //putBig( pos + pwidth )	// last chunk pointer
     putObjectChunk(m)
   }
 
-  def putObject(addr: Long, m: collection.Map[_, _]) {
+  def putObject(addr: Long, m: collection.Map[_, _]): Unit = {
     pos = addr
     putObject(m)
   }
 
-  def putObjectChunk(m: collection.Map[_, _]) {
-    padBig // continuation pointer
+  def putObjectChunk(m: collection.Map[_, _]): Unit = {
+    padBig() // continuation pointer
 
     val start = pos
 
-    padBig // size of object in bytes
+    padBig() // size of object in bytes
 
     for (p <- m)
       putPair(p)
@@ -495,7 +495,7 @@ abstract class IO extends IOConstants {
   def getArray = {
     val buf = new ListBuffer[Any]
 
-    def chunk {
+    def chunk: Unit = {
       val cont = getBig
       val len = getBig
       val start = pos
@@ -504,7 +504,7 @@ abstract class IO extends IOConstants {
         if (getUnsignedByte == USED)
           buf += getValue
         else
-          skipValue
+          skipValue()
       }
 
       if (cont > 0) {
@@ -533,7 +533,7 @@ abstract class IO extends IOConstants {
     putArrayChunk(s, this, cur)
   }
 
-  def putArrayChunk(s: collection.IterableOnce[Any], lengthio: IO, lengthptr: Long, contptr: Long = NUL) {
+  def putArrayChunk(s: collection.IterableOnce[Any], lengthio: IO, lengthptr: Long, contptr: Long = NUL): Unit = {
     putBig(contptr) // continuation pointer
 
     val start = pos
@@ -570,7 +570,7 @@ abstract class IO extends IOConstants {
 
           chunk(header + pwidth)
 
-          private def chunk(p: Long) {
+          private def chunk(p: Long): Unit = {
             cont = getBig(p)
             chunksize = getBig
             cur = pos
@@ -630,7 +630,7 @@ abstract class IO extends IOConstants {
       case ELEMENTS =>
         val header = pos
 
-        skipBig
+        skipBig()
 
         val first = getBig match {
           case NUL => header + 3 * pwidth
@@ -694,7 +694,7 @@ abstract class IO extends IOConstants {
 
   def atEnd = pos == size - 1
 
-  def dump {
+  def dump: Unit = {
     val cur = pos
     val width = 16
 
@@ -736,7 +736,7 @@ abstract class IO extends IOConstants {
     val stack = new ArrayStack[String]
     val reclaimed = new ArrayBuffer[(Long, Long)]
 
-    def problem(msg: String, adjust: Int = 0) {
+    def problem(msg: String, adjust: Int = 0): Unit = {
       println(f"${pos - adjust}%16x: $msg")
 
       for (item <- stack)
@@ -854,7 +854,7 @@ abstract class IO extends IOConstants {
           skip(len)
           pop
         case MEMBERS =>
-          def chunk {
+          def chunk: Unit = {
             push("object chunk")
             push("next chunk pointer")
             val cont = checkpointer
@@ -876,8 +876,8 @@ abstract class IO extends IOConstants {
                 pop
               } else {
                 checkbytes(2 * vwidth)
-                skipValue
-                skipValue
+                skipValue()
+                skipValue()
               }
 
               pop
@@ -915,7 +915,7 @@ abstract class IO extends IOConstants {
                 checkvalue
               else {
                 checkbytes(vwidth)
-                skipValue
+                skipValue()
               }
             }
 
@@ -1034,7 +1034,7 @@ abstract class IO extends IOConstants {
 
   def encode(s: String) = s.getBytes(charset)
 
-  def inert(action: => Unit) {
+  def inert(action: => Unit): Unit = {
     val cur = pos
 
     action
@@ -1059,7 +1059,7 @@ abstract class IO extends IOConstants {
   private[bittydb] val allocs = new ListBuffer[AllocIO]
   private[bittydb] var appendbase: Long = _
 
-  def remove(addr: Long) {
+  def remove(addr: Long): Unit = {
     if (getUnsignedByte(addr) == POINTER) {
       val p = getBig(addr + 1)
 
@@ -1105,7 +1105,7 @@ abstract class IO extends IOConstants {
     res
   }
 
-  private[bittydb] def placeAllocs(io: IO) {
+  private[bittydb] def placeAllocs(io: IO): Unit = {
     for (a <- allocs) {
       io.buckets(a.bucket) match {
         case NUL =>
@@ -1123,7 +1123,7 @@ abstract class IO extends IOConstants {
     }
   }
 
-  private[bittydb] def writeAllocBackpatches {
+  private[bittydb] def writeAllocBackpatches: Unit = {
     for (a <- allocs) {
       a.writeBackpatches()
       a.writeAllocBackpatches

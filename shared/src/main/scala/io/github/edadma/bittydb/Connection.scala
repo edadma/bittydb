@@ -14,27 +14,27 @@ object Connection {
     throw new InvalidDatabaseException
   }
 
-  def disk(file: String, options: (Symbol, Any)*): Connection = disk(new File(file), options: _*)
+  def disk(file: String, options: (String, Any)*): Connection = disk(new File(file), options: _*)
 
-  def disk(f: File, options: (Symbol, Any)*): Connection = {
+  def disk(f: File, options: (String, Any)*): Connection = {
     if (Database.exists(f) && f.length == 0)
       invalid
     else
       new Connection(new DiskIO(f), options)
   }
 
-  def temp(options: (Symbol, Any)*): (File, Connection) = {
+  def temp(options: (String, Any)*): (File, Connection) = {
     val file = File.createTempFile("temp", ".bittydb")
 
     (file, new Connection(new DiskIO(file), options))
   }
 
-  def mem(options: (Symbol, Any)*) = new Connection(new MemIO, options)
+  def mem(options: (String, Any)*) = new Connection(new MemIO, options)
 }
 
 class InvalidDatabaseException extends Exception("invalid database")
 
-class Connection(private[bittydb] val io: IO, options: Seq[(Symbol, Any)])
+class Connection(private[bittydb] val io: IO, options: Seq[(String, Any)])
     extends mutable.AbstractMap[String, Collection]
     with IOConstants {
   private[bittydb] var version: String = _
@@ -47,20 +47,20 @@ class Connection(private[bittydb] val io: IO, options: Seq[(Symbol, Any)])
 
     for (opt <- options)
       opt match {
-        case (Symbol("charset"), cs: String) =>
+        case ("charset", cs: String) =>
           io.charset = Charset.forName(cs)
-        case (Symbol("pwidth"), n: Int) =>
+        case ("pwidth", n: Int) =>
           if (1 <= n && n <= 8)
             io.pwidth = n
           else
             sys.error("'pwidth' is between 1 and 8 (inclusive)")
-        case (Symbol("cwidth"), n: Int) =>
+        case ("cwidth", n: Int) =>
           if (io.pwidth <= n && n <= 255)
             io.cwidth = n
           else
             sys.error("'cwidth' is between 'pwidth' and 255 (inclusive)")
-        case (Symbol("uuid"), on: Boolean) => io.uuidOption = on
-        case (Symbol(o), _)                => sys.error(s"unknown option '$o'")
+        case ("uuid", on: Boolean) => io.uuidOption = on
+        case (o, _)                => sys.error(s"unknown option '$o'")
       }
 
     io putByteString io.charset.name
@@ -75,7 +75,7 @@ class Connection(private[bittydb] val io: IO, options: Seq[(Symbol, Any)])
 
     rootPtr = io.pos
     io putValue Map.empty
-    io.force
+    io.force()
   } else
     io.getByteString match {
       case Some(s) if s == "BittyDB" =>
@@ -257,13 +257,13 @@ class Connection(private[bittydb] val io: IO, options: Seq[(Symbol, Any)])
             if (io.getValue == key)
               return Some(addr)
             else
-              io.skipValue
+              io.skipValue()
           else {
             if (where.isEmpty)
               where = Some(io.pos - 1)
 
-            io.skipValue
-            io.skipValue
+            io.skipValue()
+            io.skipValue()
           }
         }
 
@@ -274,7 +274,7 @@ class Connection(private[bittydb] val io: IO, options: Seq[(Symbol, Any)])
           None
       }
 
-      io.skipBig
+      io.skipBig()
 
       chunk match {
         case Some(addr) => Right(addr)
@@ -336,11 +336,11 @@ class Connection(private[bittydb] val io: IO, options: Seq[(Symbol, Any)])
         case EMPTY if addr == rootPtr =>
           io.putByte(addr, MEMBERS)
           io.putObject(Map(kv))
-          io.finish
+          io.finish()
           false
         case EMPTY =>
           io.putValue(addr, Map(kv))
-          io.finish
+          io.finish()
           false
         case MEMBERS =>
           val header = io.pos

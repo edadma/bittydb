@@ -60,9 +60,9 @@ class RandomTests extends AnyFreeSpec with Matchers with TableDrivenPropertyChec
         val db =
           if (trial == 0) {
             Database remove "test"
-            Connection.disk("test", Symbol("uuid") -> false, Symbol("pwidth") -> pwidth, Symbol("cwidth") -> cwidth)
+            Connection.disk("test", "uuid" -> false, "pwidth" -> pwidth, "cwidth" -> cwidth)
           } else
-            Connection.mem(Symbol("uuid") -> false, Symbol("pwidth") -> pwidth, Symbol("cwidth") -> cwidth)
+            Connection.mem("uuid" -> false, "pwidth" -> pwidth, "cwidth" -> cwidth)
         val coll = db("test")
         val set = new mutable.HashSet[Map[String, Any]]
 

@@ -5,9 +5,9 @@ import java.io.{RandomAccessFile, File}
 class DiskIO(f: File) extends IO {
   private lazy val file = new RandomAccessFile(f, "rw")
 
-  def close: Unit = file.close()
+  def close(): Unit = file.close()
 
-  def force: Unit = file.getChannel.force(true)
+  def force(): Unit = file.getChannel.force(true)
 
   def readLock(addr: Long): Unit = todo
 
