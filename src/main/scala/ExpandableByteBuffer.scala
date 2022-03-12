@@ -16,7 +16,7 @@ class ExpandableByteBuffer( maxsize: Int )
 	def size = _size
 	
 	def size_=( s: Int ) {
-		val cur = _buffer.position
+		val cur = _buffer.position()
 		
 		sizeHint( s )
 		_size = s
@@ -31,20 +31,20 @@ class ExpandableByteBuffer( maxsize: Int )
 			if (_buffer eq null)
 				0
 			else
-				_buffer.position
+				_buffer.position()
 				
 		_buffer = ByteBuffer.wrap( res )
 		_buffer.position( p )
 		res
 	}
 	
-	def getting( bytes: Int ) = assert( _buffer.position + bytes <= _size, "attempting to read past end of buffer" )
+	def getting( bytes: Int ) = assert( _buffer.position() + bytes <= _size, "attempting to read past end of buffer" )
 	
 	def putting( bytes: Int ) = {
-		if (_buffer.position + bytes.toLong > maxsize)
+		if (_buffer.position() + bytes.toLong > maxsize)
 			sys.error( "size overflow" )
 
-		sizeHint( _buffer.position + bytes )
+		sizeHint( _buffer.position() + bytes )
 	}
 
 	def sizeHint( hint: Int ) {
