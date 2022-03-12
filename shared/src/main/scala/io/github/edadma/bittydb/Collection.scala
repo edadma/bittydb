@@ -8,8 +8,8 @@ import io.github.edadma.dal.PrecisionDAL
 import scala.language.postfixOps
 
 object Collection {
-  val QUERY_PREDICATES = Set("$eq", "$lt", "$gt", "$lte", "$gte", "$ne", "$in", "$nin")
-  val UPDATE_OPERATORS = Set("$set", "$unset", "$datetime", "$timestamp")
+  val QUERY_PREDICATES: Set[String] = Set("$eq", "$lt", "$gt", "$lte", "$gte", "$ne", "$in", "$nin")
+  val UPDATE_OPERATORS: Set[String] = Set("$set", "$unset", "$datetime", "$timestamp")
 }
 
 class Collection(parent: Connection#Pointer, name: String) extends IOConstants {
