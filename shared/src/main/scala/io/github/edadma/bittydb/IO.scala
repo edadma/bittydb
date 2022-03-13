@@ -417,8 +417,10 @@ abstract class IO extends IOConstants {
 
         pad(p)
       case a: collection.Map[_, _] if a.isEmpty => putSimple(EMPTY)
-      case a: collection.Map[Any, Any] =>
-        putAlloc(ARRAY_MEMS).putArrayObject(a) // putAlloc( LIST_MEMS ).putListObject( a )
+      case a: collection.Map[_, _] =>
+        putAlloc(ARRAY_MEMS).putArrayObject(
+          a.asInstanceOf[collection.Map[Any, Any]],
+        ) // putAlloc( LIST_MEMS ).putListObject( a )
       case a: collection.IndexedSeq[_] if a.isEmpty            => putSimple(EMPTY_ARRAY)
       case a: collection.IndexedSeq[_]                         => putAlloc(ARRAY_ELEMS).putArray(a)
       case a: collection.IterableOnce[_] if a.iterator.isEmpty => putSimple(NIL)
@@ -516,7 +518,7 @@ abstract class IO extends IOConstants {
     val elemsptr = pos
     var count = 0L
 
-    for (e <- s) {
+    for (e <- s.iterator) {
       putValue(e)
       count += 1
     }

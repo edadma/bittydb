@@ -97,17 +97,17 @@ class MethodTests extends AnyFreeSpec with Matchers {
     db.root("a").length shouldBe 6
   }
 
-  "prepend/length" in {
-    val db = Connection.mem()
-
-    db.root.set("a" -> Nil)
-    db.root("a").prepend(1)
-    db.root.get shouldBe Map("a" -> List(1))
-    db.root("a").length shouldBe 1
-    db.root("a").prepend(2)
-    db.root.get shouldBe Map("a" -> List(2, 1))
-    db.root("a").length shouldBe 2
-  }
+//  "prepend/length" in {
+//    val db = Connection.mem()
+//
+//    db.root.set("a" -> Nil)
+//    db.root("a").prepend(1)
+//    db.root.get shouldBe Map("a" -> List(1))
+//    db.root("a").length shouldBe 1
+//    db.root("a").prepend(2)
+//    db.root.get shouldBe Map("a" -> List(2, 1))
+//    db.root("a").length shouldBe 2
+//  }
 
   "arrayIterator" in {
     val db = Connection.mem()

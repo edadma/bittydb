@@ -55,7 +55,8 @@ class Collection(parent: Connection#Pointer, name: String) extends IOConstants {
         val d = m.getAs[Map[Any, Any]]
 
         query forall {
-          case (k, op: Map[String, Any]) if op.keysIterator forall (QUERY_PREDICATES contains) =>
+          case (k, op: Map[_, _])
+              if op.asInstanceOf[Map[String, Any]].keysIterator forall (QUERY_PREDICATES contains) =>
             op.head match {
               case ("$eq", v) => d get k contains v
               case ("$ne", v) => d get k exists (_ != v)
@@ -134,9 +135,9 @@ class Collection(parent: Connection#Pointer, name: String) extends IOConstants {
     val ops = new ListBuffer[UpdateOperator]
 
     updates match {
-      case map: Map[String, Any] if map.keysIterator forall (_.isInstanceOf[String]) =>
-        if (map.keysIterator exists UPDATE_OPERATORS)
-          for (update <- map)
+      case map: Map[_, _] if map.asInstanceOf[Map[String, Any]].keysIterator forall (_.isInstanceOf[String]) =>
+        if (map.asInstanceOf[Map[String, Any]].keysIterator exists UPDATE_OPERATORS)
+          for (update <- map.asInstanceOf[Map[String, Any]])
             update match {
               case ("$set", fields: Map[_, _]) =>
                 ops ++= fields map { case (field, value) => SetUpdateOperator(field, value) }
