@@ -1,11 +1,14 @@
 package io.github.edadma.bittydb
 
+import org.scalatest.Tag
+
+import scala.util.Random._
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.prop.TableDrivenPropertyChecks
+import org.scalatest.prop.{TableDrivenPropertyChecks, TableFor2, TableFor4}
+import org.scalatest.tagobjects.{CPU, Disk}
 
-import scala.collection.mutable.HashSet
-import scala.util.Random.*
+import scala.collection.mutable
 
 class RandomTests extends AnyFreeSpec with Matchers with TableDrivenPropertyChecks {
 
@@ -22,7 +25,7 @@ class RandomTests extends AnyFreeSpec with Matchers with TableDrivenPropertyChec
 
   object Always extends Tag("always run test")
 
-  val trials =
+  val trials: TableFor2[Int, Tag] =
     Table(
       ("trials", "tag"),
       (0, Disk),
@@ -30,7 +33,7 @@ class RandomTests extends AnyFreeSpec with Matchers with TableDrivenPropertyChec
       (2, CPU),
       (3, CPU),
     )
-  val widths =
+  val widths: TableFor4[Int, Int, Int, Int] =
     Table(
       ("pwidth", "cwidth", "insertions", "max length"),
       (1, 1, 3, 10),
@@ -57,10 +60,10 @@ class RandomTests extends AnyFreeSpec with Matchers with TableDrivenPropertyChec
         val db =
           if (trial == 0) {
             Database remove "test"
-            Connection.disk("test", 'uuid -> false, 'pwidth -> pwidth, 'cwidth -> cwidth)
-          } else Connection.mem('uuid -> false, 'pwidth -> pwidth, 'cwidth -> cwidth)
+            Connection.disk("test", "uuid" -> false, "pwidth" -> pwidth, "cwidth" -> cwidth)
+          } else Connection.mem("uuid" -> false, "pwidth" -> pwidth, "cwidth" -> cwidth)
         val coll = db("test")
-        val set = new HashSet[Map[String, Any]]
+        val set = new mutable.HashSet[Map[String, Any]]
 
         db.io.check
 
@@ -93,27 +96,7 @@ class RandomTests extends AnyFreeSpec with Matchers with TableDrivenPropertyChec
 
         db.io.check
         coll.set shouldEqual set
-
-        for (_ <- 1 to insertions / 2) {
-          val doc = set.head
-
-          coll remove doc
-          set -= doc
-        }
-
-        db.io.check
-        coll.set shouldEqual set
-
-        for (_ <- 1 to insertions / 2) {
-          val m = rnd(set, max)
-
-          coll.insert(m)
-          set += m
-        }
-
-        db.io.check
-        coll.set shouldEqual set
-        db.close
+        db.close()
       }
     }
   }
