@@ -4,8 +4,9 @@ import java.io.File
 import java.nio.charset.Charset
 import scala.collection.LinearSeq
 import scala.collection.mutable.AbstractMap
-
 import io.github.edadma.dal.BasicDAL
+
+import scala.annotation.tailrec
 
 object Connection {
   private def invalid = {
@@ -242,7 +243,7 @@ class Connection(private[bittydb] val io: IO, options: Seq[(String, Any)])
 
     def key(k: Any): Option[DBFilePointer] = lookup(k) map { case (_, addr) => new DBFilePointer(addr) }
 
-    def set(kv: (Any, Any)) =
+    def set(kv: (Any, Any)): Boolean =
       io.getType(addr) match {
         case EMPTY if addr == rootPtr =>
           io.putByte(addr, LIST_MEMS)
@@ -267,7 +268,7 @@ class Connection(private[bittydb] val io: IO, options: Seq[(String, Any)])
         case _ => sys.error("can only use 'set' for an object")
       }
 
-    def insert(elems: Any*) = insertSeq(elems.toList)
+    def insert(elems: Any*): Unit = insertSeq(elems.toList)
 
     def insertSeq(s: LinearSeq[Any]): Unit = {
       io.getType(addr) match {
@@ -277,6 +278,7 @@ class Connection(private[bittydb] val io: IO, options: Seq[(String, Any)])
 
           val freeptr = io.pos
 
+          @tailrec
           def insertList(l: LinearSeq[Any]): Unit = {
             if (l.nonEmpty) {
               io.pos = freeptr

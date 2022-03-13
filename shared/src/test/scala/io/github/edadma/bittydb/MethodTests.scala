@@ -3,6 +3,8 @@ package io.github.edadma.bittydb
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
+import scala.language.postfixOps
+
 class MethodTests extends AnyFreeSpec with Matchers {
   "set/remove" in {
     var db = Connection.mem()
@@ -109,23 +111,23 @@ class MethodTests extends AnyFreeSpec with Matchers {
 //    db.root("a").length shouldBe 2
 //  }
 
-  "arrayIterator" in {
-    val db = Connection.mem()
-
-    db.root.set("a" -> Nil)
-    //		db.root( "a" ).cursor.isEmpty shouldBe true
-    //
-    //		db.root( "a" ).append( 5 )
-    //		db.root( "a" ).members.toList shouldBe List( 5 )
-    //		db.root( "a" ).prepend( 1, 2 )
-    //		db.root( "a" ).append( 3 )
-    //		db.root( "a" ).prepend( 4 )
-    //		db.root( "a" ).get shouldBe List( 4, 1, 2, 5, 3 )
-    //
-    //		db.root( "a" ).cursor.drop(3).next.put( "happy" )
-    //		db.root( "a" ).get shouldBe List( 4, 1, 2, "happy", 3 )
-    //		db.root( "a" ).members.toList shouldBe List( 4, 1, 2, "happy", 3 )
-  }
+//  "arrayIterator" in {
+//    val db = Connection.mem()
+//
+//    db.root.set("a" -> Nil)
+//    db.root( "a" ).cursor.isEmpty shouldBe true
+//
+//    db.root( "a" ).append( 5 )
+//    db.root( "a" ).members.toList shouldBe List( 5 )
+//    db.root( "a" ).prepend( 1, 2 )
+//    db.root( "a" ).append( 3 )
+//    db.root( "a" ).prepend( 4 )
+//    db.root( "a" ).get shouldBe List( 4, 1, 2, 5, 3 )
+//
+//    db.root( "a" ).cursor.drop(3).next.put( "happy" )
+//    db.root( "a" ).get shouldBe List( 4, 1, 2, "happy", 3 )
+//    db.root( "a" ).members.toList shouldBe List( 4, 1, 2, "happy", 3 )
+//  }
 
   "list (objectIterator)" in {
     val db = Connection.mem()
@@ -141,48 +143,62 @@ class MethodTests extends AnyFreeSpec with Matchers {
   }
 
   "update (MongoDB style)" in {
-    //	val db = Connection.mem()
-    //
-    //		db.root.set( "test" -> List(Map("a" -> 1, "b" -> "first"), Map("a" -> 2, "b" -> "second"), Map("a" -> 3, "b" -> "third")) )
-    //		db( "test" ).update( Map("a" -> Map("$lt" -> 3)), Map("$set" -> Map("a" -> 123, "b" -> 456)) ) shouldBe 2
-    //		db.root("test").get shouldBe List(Map("a" -> 123, "b" -> 456), Map("a" -> 123, "b" -> 456), Map("a" -> 3, "b" -> "third"))
+    val db = Connection.mem()
+
+    db.root.set(
+      "test" -> List(Map("a" -> 1, "b" -> "first"), Map("a" -> 2, "b" -> "second"), Map("a" -> 3, "b" -> "third")),
+    )
+    db("test").update(Map("a" -> Map("$lt" -> 3)), Map("$set" -> Map("a" -> 123, "b" -> 456))) shouldBe 2
+    db.root("test").get shouldBe List(
+      Map("a" -> 123, "b" -> 456),
+      Map("a" -> 123, "b" -> 456),
+      Map("a" -> 3, "b" -> "third"),
+    )
   }
 
   "insert, find, remove, update (functional style)" in {
-    //		val db = Connection.mem( 'charset -> "GB18030", 'uuid -> false )
-    //
-    //		db( "test" ).insert( Map("a" -> 1, "b" -> "first"), Map("a" -> 2, "b" -> "second"), Map("a" -> 3, "b" -> "third") )
-    //
-    //		db.root("test").get shouldBe List(Map("a" -> 1, "b" -> "first"), Map("a" -> 2, "b" -> "second"), Map("a" -> 3, "b" -> "third"))
-    //
-    //		(db( "test" ) find (_("a") < 3) toList) shouldBe List(Map("a" -> 1, "b" -> "first"), Map("a" -> 2, "b" -> "second"))
-    //
-    //		db( "test" ) remove (_("a") in Set(1, 2))
-    //		db.root("test").get shouldBe List(Map("a" -> 3, "b" -> "third"))
-    //
-    //		db( "test" ) update (_("a") === 3, "b" -> "第三")
-    //		db.root("test").get shouldBe List(Map("a" -> 3, "b" -> "第三"))
+    val db = Connection.mem("charset" -> "GB18030", "uuid" -> false)
+
+    db("test").insert(Map("a" -> 1, "b" -> "first"), Map("a" -> 2, "b" -> "second"), Map("a" -> 3, "b" -> "third"))
+
+    db.root("test").get shouldBe List(
+      Map("a" -> 1, "b" -> "first"),
+      Map("a" -> 2, "b" -> "second"),
+      Map("a" -> 3, "b" -> "third"),
+    )
+
+    (db("test") find (_("a") < 3) toList) shouldBe List(Map("a" -> 1, "b" -> "first"), Map("a" -> 2, "b" -> "second"))
+
+    db("test") remove (_("a") in Set(1, 2))
+    db.root("test").get shouldBe List(Map("a" -> 3, "b" -> "third"))
+
+    db("test") update (_("a") === 3, "b" -> "第三")
+    db.root("test").get shouldBe List(Map("a" -> 3, "b" -> "第三"))
   }
 
   "disk insert, find, remove, update (functional style)" in {
-    //		val (file, db) = Connection.temp( 'charset -> "GB18030", 'uuid -> false )
-    //
-    //		db( "test" ).insert( Map("a" -> 1, "b" -> "first"), Map("a" -> 2, "b" -> "second"), Map("a" -> 3, "b" -> "third") )
-    //
-    //		db.root("test").get shouldBe List(Map("a" -> 1, "b" -> "first"), Map("a" -> 2, "b" -> "second"), Map("a" -> 3, "b" -> "third"))
-    //
-    //		(db( "test" ) find (_("a") < 3) toList) shouldBe List(Map("a" -> 1, "b" -> "first"), Map("a" -> 2, "b" -> "second"))
-    //
-    //		db( "test" ) remove (_("a") in Set(1, 2))
-    //		db.root("test").get shouldBe List(Map("a" -> 3, "b" -> "third"))
-    //
-    //		db( "test" ) update (_("a") === 3, "b" -> "第三")
-    //		db.root("test").get shouldBe List(Map("a" -> 3, "b" -> "第三"))
-    //		db.close
-    //
-    //		val db1 = Connection.disk( file )
-    //
-    //		db1.root("test").get shouldBe List(Map("a" -> 3, "b" -> "第三"))
-    //		db1.close
+    val (file, db) = Connection.temp("charset" -> "GB18030", "uuid" -> false)
+
+    db("test").insert(Map("a" -> 1, "b" -> "first"), Map("a" -> 2, "b" -> "second"), Map("a" -> 3, "b" -> "third"))
+
+    db.root("test").get shouldBe List(
+      Map("a" -> 1, "b" -> "first"),
+      Map("a" -> 2, "b" -> "second"),
+      Map("a" -> 3, "b" -> "third"),
+    )
+
+    (db("test") find (_("a") < 3) toList) shouldBe List(Map("a" -> 1, "b" -> "first"), Map("a" -> 2, "b" -> "second"))
+
+    db("test") remove (_("a") in Set(1, 2))
+    db.root("test").get shouldBe List(Map("a" -> 3, "b" -> "third"))
+
+    db("test") update (_("a") === 3, "b" -> "第三")
+    db.root("test").get shouldBe List(Map("a" -> 3, "b" -> "第三"))
+    db.close()
+
+    val db1 = Connection.disk(file)
+
+    db1.root("test").get shouldBe List(Map("a" -> 3, "b" -> "第三"))
+    db1.close()
   }
 }

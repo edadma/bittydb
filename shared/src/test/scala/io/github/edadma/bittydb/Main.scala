@@ -1,7 +1,9 @@
 package io.github.edadma.bittydb
 
+import scala.annotation.tailrec
+import scala.collection.mutable
 import scala.collection.mutable.HashSet
-import util.Random._
+import util.Random.*
 
 object Main extends App {
 
@@ -12,13 +14,12 @@ object Main extends App {
 
   def rndAlpha = new String(Array.fill(nextInt(64))((nextInt('z' - 'a') + 'a').toChar))
 
+  @tailrec
   def rnd(s: collection.Set[Map[String, Any]]): Map[String, Any] = {
     val a = Map(rndAlpha -> nextLong)
 
-    if (s(a))
-      rnd(s)
-    else
-      a
+    if (s(a)) rnd(s)
+    else a
   }
 
   def prt(m: Map[String, Any]): Unit = {
@@ -27,7 +28,7 @@ object Main extends App {
     } mkString " -> ")
   }
 
-  val set = new HashSet[Map[String, Any]]
+  val set = new mutable.HashSet[Map[String, Any]]
   val insertions = 100
 
   println("insert")

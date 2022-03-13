@@ -20,13 +20,12 @@ lazy val bittydb = crossProject( /*JSPlatform,*/ JVMPlatform /*, NativePlatform*
     organization := "io.github.edadma",
     githubOwner := "edadma",
     githubRepository := name.value,
-    mainClass := Some(s"${organization.value}.${name.value}.Main"),
     libraryDependencies += "org.scalatest" %%% "scalatest" % "3.2.11" % "test",
     libraryDependencies ++= Seq(
-      "io.github.edadma" %%% "dal" % "0.1.9"
+      "io.github.edadma" %%% "dal" % "0.1.9",
     ),
     publishMavenStyle := true,
-    Test / publishArtifact := false
+    Test / publishArtifact := false,
   )
   .jvmSettings(
     libraryDependencies += "org.scala-js" %% "scalajs-stubs" % "1.1.0" % "provided",
