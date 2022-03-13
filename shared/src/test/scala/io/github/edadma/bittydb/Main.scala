@@ -1,8 +1,4 @@
-package xyz.hyperreal.bittydb
-
-import scala.collection.mutable.HashSet
-import util.Random._
-
+package io.github.edadma.bittydb
 
 object Main extends App {
 

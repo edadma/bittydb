@@ -1,5 +1,4 @@
-package xyz.hyperreal.bittydb
-
+package io.github.edadma.bittydb
 
 trait IOConstants {
 	val NULL =				0x00	// JVM null
@@ -34,7 +33,7 @@ trait IOConstants {
 	val BLOB =				0xE0
 	val TYPE =				0xF0
 	val DELETED =			0xFF
-	
+
 	val UBYTE_LENGTH = 0
 	val USHORT_LENGTH = 1
 	val INT_LENGTH = 2
