@@ -14,8 +14,8 @@ class RandomTests extends AnyFreeSpec with Matchers with TableDrivenPropertyChec
 
   def rndAlpha(max: Int) = new String(Array.fill(nextInt(max))((nextInt('z' - 'a') + 'a').toChar))
 
-  def rnd(s: collection.Set[Map[String, Any]], max: Int): Map[String, Any] = {
-    val a = Map(rndAlpha(max) -> nextLong)
+  def rnd(s: collection.Set[Map[Any, Any]], max: Int): Map[Any, Any] = {
+    val a: Map[Any, Any] = Map(rndAlpha(max) -> nextLong)
 
     if (s(a))
       rnd(s, max)
@@ -63,7 +63,7 @@ class RandomTests extends AnyFreeSpec with Matchers with TableDrivenPropertyChec
             Connection.disk("test", "uuid" -> false, "pwidth" -> pwidth, "cwidth" -> cwidth)
           } else Connection.mem("uuid" -> false, "pwidth" -> pwidth, "cwidth" -> cwidth)
         val coll = db("test")
-        val set = new mutable.HashSet[Map[String, Any]]
+        val set = new mutable.HashSet[Map[Any, Any]]
 
         db.io.check
 

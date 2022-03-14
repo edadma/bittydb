@@ -23,6 +23,7 @@ lazy val bittydb = crossProject( /*JSPlatform,*/ JVMPlatform /*, NativePlatform*
     libraryDependencies += "org.scalatest" %%% "scalatest" % "3.2.11" % "test",
     libraryDependencies ++= Seq(
       "io.github.edadma" %%% "dal" % "0.1.9",
+      "com.lihaoyi" %%% "pprint" % "0.7.1",
     ),
     publishMavenStyle := true,
     Test / publishArtifact := false,

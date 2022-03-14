@@ -14,8 +14,6 @@ object Collection {
 class Collection(parent: Connection#Pointer, name: String) extends IOConstants {
   import Collection._
 
-  type Document = Map[_, _]
-
   private var c: Connection#Pointer = _
 
   check
@@ -40,7 +38,9 @@ class Collection(parent: Connection#Pointer, name: String) extends IOConstants {
       c = parent(name)
     }
 
-  def iterator: Iterator[Any] = c.elements
+  def iterator: Iterator[Any] =
+    if c eq null then Iterator.empty
+    else c.elements
 
   def list: Seq[Any] = iterator.toList
 
@@ -55,7 +55,8 @@ class Collection(parent: Connection#Pointer, name: String) extends IOConstants {
         val d = m.getAs[Map[Any, Any]]
 
         query forall {
-          case (k, op: Map[_, _]) if op.asInstanceOf[Map[String, Any]].keysIterator forall QUERY_PREDICATES.contains =>
+          case (k, op: Map[_, _])
+              if op.asInstanceOf[Map[Any, Any]].keysIterator forall (opk => QUERY_PREDICATES.exists(_ == opk)) =>
             op.head match {
               case ("$eq", v) => d get k contains v
               case ("$ne", v) => d get k exists (_ != v)
@@ -86,7 +87,7 @@ class Collection(parent: Connection#Pointer, name: String) extends IOConstants {
     if (check) cursor map (_.get)
     else Iterator.empty
 
-  infix def find(query: Document = Map()): Iterator[Any] = find(filter(query))
+  infix def find(query: Map[Any, Any] = Map()): Iterator[Any] = find(filter(query))
 
   infix def find(query: Connection#Cursor => Boolean): Iterator[Any] = find(filter(query))
 
@@ -102,7 +103,7 @@ class Collection(parent: Connection#Pointer, name: String) extends IOConstants {
       count
     } else 0
 
-  infix def remove(query: Document): Int = remove(filter(query))
+  infix def remove(query: Map[Any, Any]): Int = remove(filter(query))
 
   def remove(query: Connection#Cursor => Boolean): Int = remove(filter(query))
 
@@ -128,7 +129,7 @@ class Collection(parent: Connection#Pointer, name: String) extends IOConstants {
   infix def update(query: Connection#Cursor => Boolean, updates: (String, Any)*): Int =
     if (check) update(filter(query), updates map { case (field, update) => SetUpdateOperator(field, update) }) else 0
 
-  infix def update(query: Document, updates: Any): Int = {
+  infix def update(query: Map[Any, Any], updates: Any): Int = {
     val ops = new ListBuffer[UpdateOperator]
 
     updates match {
@@ -149,10 +150,10 @@ class Collection(parent: Connection#Pointer, name: String) extends IOConstants {
     if (check) update(filter(query), ops) else 0
   }
 
-  def insert(documents: Document*): Unit = {
+  def insert(documents: Map[Any, Any]*): Unit = {
     create()
 
-    for (d <- documents.asInstanceOf[Seq[Map[Any, Any]]])
+    for (d <- documents)
       c.insert(if ((d contains "_id") || !parent.connection.io.uuidOption) d else d + ("_id" -> randomUUID))
   }
 
