@@ -55,10 +55,10 @@ class Collection(parent: Connection#Pointer, name: String) extends IOConstants {
         val d = m.getAs[Map[Any, Any]]
 
         query forall {
-          case (k, op: Map[_, _])
-              if op.asInstanceOf[Map[Any, Any]].keysIterator forall (opk => QUERY_PREDICATES.exists(_ == opk)) =>
+          case (k, op: Map[_, _]) if op.asInstanceOf[Map[String, Any]].keysIterator forall QUERY_PREDICATES.contains =>
             op.head match {
-              case ("$eq", v) => d get k contains v
+              case ("$eq", v) =>
+                d get k contains v
               case ("$ne", v) => d get k exists (_ != v)
               case ("$lt", v) =>
                 d get k exists (n => BasicDAL.relate(Symbol("<"), n.asInstanceOf[Number], v.asInstanceOf[Number]))

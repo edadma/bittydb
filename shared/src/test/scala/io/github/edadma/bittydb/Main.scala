@@ -13,7 +13,8 @@ object Main extends App:
 
   db("tables").insert(
     Map(
-      "t" ->
+      "name" -> "t",
+      "columns" ->
         Map(
           "id" ->
             Map(
@@ -31,4 +32,4 @@ object Main extends App:
     ),
   )
 
-  pprintln(db("tables").list)
+  pprintln(db("tables").find(_("name") === "t").toList)
